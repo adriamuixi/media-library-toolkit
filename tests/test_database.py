@@ -1,3 +1,4 @@
+from contextlib import closing
 from pathlib import Path
 import sqlite3
 import tempfile
@@ -38,19 +39,20 @@ class DatabaseTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary_directory:
             path = Path(temporary_directory) / "catalog.sqlite3"
             first = initialize_database(path, "test", "TEST")
-            with sqlite3.connect(path) as connection:
-                connection.execute(
-                    """
-                    INSERT INTO library (
-                        library_id, name, environment, created_at, updated_at
-                    ) VALUES ('temporary', 'Temporary', 'TEST', 'now', 'now')
-                    """
-                )
+            with closing(sqlite3.connect(path)) as connection:
+                with connection:
+                    connection.execute(
+                        """
+                        INSERT INTO library (
+                            library_id, name, environment, created_at, updated_at
+                        ) VALUES ('temporary', 'Temporary', 'TEST', 'now', 'now')
+                        """
+                    )
 
             second = reset_test_database(path, "test", "TEST")
 
             self.assertNotEqual(first.database_id, second.database_id)
-            with sqlite3.connect(path) as connection:
+            with closing(sqlite3.connect(path)) as connection:
                 count = connection.execute("SELECT COUNT(*) FROM library").fetchone()[0]
             self.assertEqual(count, 0)
 
@@ -82,13 +84,14 @@ class DatabaseTests(unittest.TestCase):
     def test_initialize_refuses_to_adopt_unmarked_sqlite_database(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             path = Path(temporary_directory) / "unrelated.sqlite3"
-            with sqlite3.connect(path) as connection:
-                connection.execute("CREATE TABLE unrelated (value TEXT)")
+            with closing(sqlite3.connect(path)) as connection:
+                with connection:
+                    connection.execute("CREATE TABLE unrelated (value TEXT)")
 
             with self.assertRaises(DatabaseSafetyError):
                 initialize_database(path, "test", "TEST")
 
-            with sqlite3.connect(path) as connection:
+            with closing(sqlite3.connect(path)) as connection:
                 tables = {
                     row[0]
                     for row in connection.execute(

@@ -71,6 +71,24 @@ media init
 media db status
 ```
 
+Register a logical library and one provenance source:
+
+```bash
+media library add "Personal Media" \
+  --description "Long-term personal photo and video archive"
+
+media source add \
+  --library "Personal Media" \
+  --name "iPhone Personal" \
+  --type iphone \
+  --default-timezone Europe/Madrid
+
+media library list
+media source list --library "Personal Media"
+```
+
+Registration is idempotent. Repeating an identical command returns the existing record. Reusing a name with conflicting settings fails instead of silently updating catalog history.
+
 The reset command always refuses a production profile and any database whose internal environment marker is not `TEST`.
 
 ## Configuration
@@ -89,6 +107,10 @@ Relative paths are resolved from the current working directory. `config/local.to
 media init
 media db status
 media db reset --confirm-reset
+media library add
+media library list
+media source add
+media source list
 ```
 
 Use `media COMMAND --help` for command-specific help.

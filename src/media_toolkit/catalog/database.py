@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -34,6 +36,17 @@ def connect_database(path: Path) -> sqlite3.Connection:
     return connection
 
 
+@contextmanager
+def open_database(path: Path) -> Iterator[sqlite3.Connection]:
+    """Open a transactional connection and always close it on exit."""
+    connection = connect_database(path)
+    try:
+        with connection:
+            yield connection
+    finally:
+        connection.close()
+
+
 def initialize_database(path: Path, profile_name: str, environment: str) -> DatabaseStatus:
     """Create or migrate a catalog and validate its environment marker."""
     normalized_environment = environment.upper()
@@ -47,7 +60,7 @@ def initialize_database(path: Path, profile_name: str, environment: str) -> Data
             )
 
     path.parent.mkdir(parents=True, exist_ok=True)
-    with connect_database(path) as connection:
+    with open_database(path) as connection:
         apply_migrations(connection)
         row = connection.execute(
             "SELECT database_id, profile_name, environment FROM catalog_metadata WHERE singleton = 1"
@@ -103,6 +116,22 @@ def get_database_status(path: Path) -> DatabaseStatus:
         environment=metadata["environment"],
         schema_version=int(version_row["version"]),
     )
+
+
+def require_database(path: Path, expected_environment: str) -> DatabaseStatus:
+    """Require an initialized catalog with the expected environment marker."""
+    status = get_database_status(path)
+    if not status.exists:
+        raise DatabaseSafetyError(
+            f"Catalog is not initialized: {path}. Run 'media init' first."
+        )
+    normalized_environment = expected_environment.upper()
+    if status.environment != normalized_environment:
+        raise DatabaseSafetyError(
+            "Database environment marker does not match the selected profile: "
+            f"database={status.environment}, profile={normalized_environment}."
+        )
+    return status
 
 
 def reset_test_database(path: Path, profile_name: str, environment: str) -> DatabaseStatus:

@@ -13,7 +13,7 @@
 
 ## V1.1 — Scan
 
-- [ ] Register libraries and sources
+- [x] Register libraries and sources
 - [ ] Read-only filesystem inventory
 - [ ] Relative paths
 - [ ] Photo, video, sidecar, and unknown classification

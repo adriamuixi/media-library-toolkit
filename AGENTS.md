@@ -37,14 +37,16 @@ Physical files, catalog records, and proposed operations are separate concepts.
 
 ## Current State
 
-The project is in the Foundation phase. It currently provides:
+The Foundation phase is complete and V1.1 catalog registration is implemented. The project currently provides:
 
 - an installable Python CLI;
 - TOML configuration;
 - external logging directories;
 - checksum-verified SQLite migrations;
 - isolated TEST and PRODUCTION catalog profiles;
-- a reset command restricted to catalogs marked as TEST.
+- a reset command restricted to catalogs marked as TEST;
+- idempotent logical library registration;
+- idempotent provenance source registration with optional IANA timezone validation.
 
 Media scanning has not yet been implemented.
 

@@ -18,3 +18,8 @@ The project intends to follow Semantic Versioning once stable public releases be
 - Initial safety, architecture, database, and process documentation.
 - Dependency-free Foundation test suite.
 - Documented image geometry and panorama classification requirements for the metadata phase.
+- Added idempotent logical library and provenance source registration commands.
+- Added deterministic library and source listing commands.
+- Added IANA timezone validation for source defaults.
+- Added strict catalog environment checks to registration operations.
+- Added transactional SQLite connection handling with guaranteed closure.

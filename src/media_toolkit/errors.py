@@ -11,3 +11,7 @@ class ConfigurationError(MediaToolkitError):
 
 class DatabaseSafetyError(MediaToolkitError):
     """Raised when a database operation violates a safety rule."""
+
+
+class CatalogError(MediaToolkitError):
+    """Raised when a catalog record cannot be created or resolved safely."""
