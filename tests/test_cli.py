@@ -12,6 +12,15 @@ from media_toolkit.metadata.models import ToolStatus
 
 
 class CliTests(unittest.TestCase):
+    def test_web_command_prefix_preserves_profile_and_config(self) -> None:
+        from argparse import Namespace
+        from media_toolkit.cli import _web_command_prefix
+
+        command = _web_command_prefix(Namespace(config=Path("local.toml"), profile="test"))
+
+        self.assertEqual(command[1:3], ["-m", "media_toolkit.cli"])
+        self.assertEqual(command[-4:], ["--config", "local.toml", "--profile", "test"])
+
     def _write_config(self, directory: Path) -> Path:
         config_path = directory / "test-config.toml"
         config_path.write_text(

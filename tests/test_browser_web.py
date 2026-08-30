@@ -57,6 +57,7 @@ class BrowserWebTests(unittest.TestCase):
             self.assertEqual(gallery.status_code, 200)
             self.assertIn(b"2024/IMG.jpg", gallery.data)
             self.assertNotIn(b"toAnalyze/private.jpg", gallery.data)
+            self.assertIn(b"http://127.0.0.1:8082", gallery.data)
             self.assertEqual(detail.status_code, 200)
             self.assertEqual(thumbnail.status_code, 200)
             self.assertEqual(thumbnail.mimetype, "image/jpeg")

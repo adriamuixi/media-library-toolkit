@@ -217,6 +217,7 @@ _STYLE = """
 _INDEX_TEMPLATE = """<!doctype html>
 <title>Media Library Review</title>""" + _STYLE + """
 <main>
+  <nav class="pager"><a class="button" href="http://127.0.0.1:8080">Browser</a><a class="button" href="http://127.0.0.1:8081">Database</a><a class="button active" href="/">Review</a></nav>
   <div class="eyebrow">Local catalog review</div>
   <h1>Media Library Review</h1>
   <p class="lede">Review catalog evidence safely. Library: <strong>{{ library_name }}</strong>. Results are paginated at {{ page_size }} rows.</p>
@@ -233,6 +234,7 @@ _INDEX_TEMPLATE = """<!doctype html>
 _TABLE_TEMPLATE = """<!doctype html>
 <title>{{ title }}</title>""" + _STYLE + """
 <main>
+  <nav class="pager"><a class="button" href="http://127.0.0.1:8080">Browser</a><a class="button" href="http://127.0.0.1:8081">Database</a><a class="button active" href="/">Review</a></nav>
   <a class="back" href="/">← Review index</a>
   <div class="eyebrow" style="margin-top: 32px;">Catalog review</div>
   <h1>{{ title }}</h1>

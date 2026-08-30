@@ -238,6 +238,7 @@ media plan list --id PLAN_ID
 media plan export --id PLAN_ID --output PATH
 media review --library LIBRARY --root MEDIA_ROOT --port 8080
 media browse --library LIBRARY --root MEDIA_ROOT --port 8080
+media web --library LIBRARY --root MEDIA_ROOT
 media operations copy --plan PLAN_ID --source-root SOURCE --destination-root DESTINATION --confirm-write PLAN_ID
 media operations move --plan PLAN_ID --source-root SOURCE --destination-root DESTINATION --confirm-write PLAN_ID
 media db browse --port 8081
@@ -246,6 +247,8 @@ media db browse --port 8081
 Use `media COMMAND --help` for command-specific help.
 
 `media browse` is a loopback-only read-only gallery for an organized library. It excludes the `toAnalyze` directory and writes generated thumbnails only under the configured external cache.
+
+Use `media web --library LIBRARY --root MEDIA_ROOT` to launch Browser at port 8080, Database Browser at port 8081, and Local Review at port 8082 together. It opens Browser by default and each HTML interface provides links to the other two. Press Ctrl+C once to stop all three services. Add `--no-open` when launching without a desktop browser.
 
 ## Repository Structure
 

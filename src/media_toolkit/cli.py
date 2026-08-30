@@ -8,7 +8,9 @@ import logging
 from pathlib import Path
 import subprocess
 import sys
+import time
 from typing import Sequence
+import webbrowser
 
 from media_toolkit import __version__
 from media_toolkit.associations.service import (
@@ -508,6 +510,16 @@ def build_parser() -> argparse.ArgumentParser:
     browse_parser.add_argument("--root", required=True, type=Path)
     browse_parser.add_argument("--port", type=int, default=8080)
     browse_parser.set_defaults(handler=_handle_browse)
+
+    web_parser = commands.add_parser(
+        "web", help="Launch the local Browser, Review, and Database Browser together."
+    )
+    web_parser.add_argument("--library", required=True)
+    web_parser.add_argument("--root", required=True, type=Path)
+    web_parser.add_argument(
+        "--no-open", action="store_true", help="Do not open the local portal in a browser."
+    )
+    web_parser.set_defaults(handler=_handle_web)
 
     operations_parser = commands.add_parser(
         "operations", help="Apply explicitly confirmed controlled media operations."
@@ -1126,6 +1138,66 @@ def _handle_browse(args: argparse.Namespace, config: AppConfig) -> int:
     print(f"Local media browser running at: http://127.0.0.1:{args.port}")
     application.run(host="127.0.0.1", port=args.port, debug=False)
     return 0
+
+
+def _web_command_prefix(args: argparse.Namespace) -> list[str]:
+    """Build a child CLI invocation preserving the selected local configuration."""
+    command = [sys.executable, "-m", "media_toolkit.cli"]
+    if args.config is not None:
+        command.extend(("--config", str(args.config)))
+    if args.profile is not None:
+        command.extend(("--profile", args.profile))
+    return command
+
+
+def _handle_web(args: argparse.Namespace, config: AppConfig) -> int:
+    """Run all local read-only HTML interfaces and stop children on interruption."""
+    if importlib.util.find_spec("flask") is None or importlib.util.find_spec("PIL") is None:
+        raise MediaToolkitError(
+            "Local web interfaces require browser and review dependencies. "
+            "Run: .venv/bin/python -m pip install -e '.[browser,review,database]'."
+        )
+    if importlib.util.find_spec("datasette") is None:
+        raise MediaToolkitError(
+            "The local Database Browser requires Datasette. "
+            "Run: .venv/bin/python -m pip install -e '.[database]'."
+        )
+    profile = config.profile(args.profile)
+    if not profile.database.is_file():
+        raise MediaToolkitError(
+            f"Catalog is not initialized: {profile.database}. Run 'media init' first."
+        )
+    prefix = _web_command_prefix(args)
+    commands = (
+        prefix + ["browse", "--library", args.library, "--root", str(args.root), "--port", "8080"],
+        prefix + ["review", "--library", args.library, "--root", str(args.root), "--port", "8082"],
+        prefix + ["db", "browse", "--port", "8081"],
+    )
+    processes = [subprocess.Popen(command) for command in commands]
+    portal_url = "http://127.0.0.1:8080"
+    print("Local web toolkit running:")
+    print(f"  Browser:  {portal_url}")
+    print("  Database: http://127.0.0.1:8081")
+    print("  Review:   http://127.0.0.1:8082")
+    print("Press Ctrl+C to stop every local service.")
+    if not args.no_open:
+        webbrowser.open(portal_url)
+    try:
+        while all(process.poll() is None for process in processes):
+            time.sleep(0.25)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        for process in processes:
+            if process.poll() is None:
+                process.terminate()
+        for process in processes:
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                process.kill()
+    failed = [process.returncode for process in processes if process.returncode not in (0, None)]
+    return 1 if failed else 0
 
 
 def _handle_operations_copy(args: argparse.Namespace, config: AppConfig) -> int:

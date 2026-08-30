@@ -26,6 +26,7 @@ class ReviewWebTests(unittest.TestCase):
 
             self.assertEqual(index.status_code, 200)
             self.assertIn(b"Media Library Review", index.data)
+            self.assertIn(b"http://127.0.0.1:8080", index.data)
             self.assertEqual(duplicates.status_code, 200)
             self.assertIn(b"No matching records in this page.", duplicates.data)
             self.assertEqual(no_date.status_code, 200)

@@ -20,6 +20,8 @@ Catalog changes remain the responsibility of migrations, CLI commands, and contr
 
 Use the db browse command with an explicit port. It uses the selected profile's configured catalog and generates Datasette query metadata only under the external cache directory. An explicit database path is intentionally not supported.
 
+For the normal local interface set, use `media web --library LIBRARY --root MEDIA_ROOT`. It launches this database browser at `http://127.0.0.1:8081` alongside Browser and Review.
+
 ## Saved Queries
 
 Versioned, schema-aware inspection queries live in the queries directory and are loaded as Datasette canned queries. The initial set covers:
