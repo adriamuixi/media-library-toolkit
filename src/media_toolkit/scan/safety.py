@@ -29,3 +29,23 @@ def ensure_external_working_paths(root: Path, paths: Iterable[Path]) -> None:
                 "Generated application state must remain outside the media root: "
                 f"{resolved_path}"
             )
+
+
+def resolve_cataloged_file(root: Path, relative_path: str) -> Path:
+    """Resolve one cataloged path without following symbolic-link components."""
+    candidate = root
+    for part in Path(relative_path).parts:
+        candidate = candidate / part
+        if candidate.is_symlink():
+            raise MediaToolkitError("The cataloged path contains a symbolic link.")
+    try:
+        resolved = candidate.resolve(strict=True)
+    except OSError as exc:
+        raise MediaToolkitError(
+            f"The cataloged file does not exist or cannot be resolved: {relative_path}"
+        ) from exc
+    if resolved != root and root not in resolved.parents:
+        raise MediaToolkitError("The cataloged path resolves outside the selected media root.")
+    if not resolved.is_file():
+        raise MediaToolkitError("The cataloged path is not a regular file.")
+    return resolved

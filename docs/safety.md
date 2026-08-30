@@ -28,6 +28,12 @@ Test and production catalogs use different files by default. This is safer than 
 
 Future copy and move strategies must use immutable plans, source preconditions, destination conflict checks, operation journaling, and post-copy SHA-256 verification. Destination overwrite is prohibited.
 
+## Hashing
+
+`media hashes calculate` is a READ ONLY operation. It validates that generated application state remains outside the media root, rejects symbolic-link paths, streams file content with a configured bounded chunk size, and performs no media mutation.
+
+The operation compares filesystem size and modification time with the completed inventory before it reads a file, then validates the same values after hashing. A mismatch discards the digest, records an immutable error attempt, and requires a new scan. Hashing failures are isolated per file so one unreadable file cannot silently omit the rest of the source.
+
 Before any WRITE operation moves or renames media, it must verify that immutable provenance exists, including the original relative path, source, and import batch. The operation must append a journal record and a current-location transition. It must not replace or delete the only historical reference to an origin.
 
 Production WRITE remains out of scope until a consistent SQLite backup command and open-format provenance export have been implemented and tested.

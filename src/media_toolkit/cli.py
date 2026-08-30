@@ -32,6 +32,7 @@ from media_toolkit.dates.service import (
     run_date_resolution,
 )
 from media_toolkit.errors import MediaToolkitError
+from media_toolkit.hashing.service import HashRequest, list_hashes, run_hashing
 from media_toolkit.logging_config import configure_logging
 from media_toolkit.metadata.exiftool import ExifToolAdapter
 from media_toolkit.metadata.ffprobe import FfprobeAdapter
@@ -298,6 +299,46 @@ def build_parser() -> argparse.ArgumentParser:
         help="Include historical relations not present in the latest detection.",
     )
     associations_list_parser.set_defaults(handler=_handle_associations_list)
+
+    hashes_parser = commands.add_parser(
+        "hashes", help="Calculate or list streaming content hashes."
+    )
+    hashes_commands = hashes_parser.add_subparsers(dest="hashes_command", required=True)
+    hashes_calculate_parser = hashes_commands.add_parser(
+        "calculate", help="Calculate SHA-256 without modifying media."
+    )
+    hashes_calculate_parser.add_argument(
+        "--library", required=True, help="Name of the existing logical library."
+    )
+    hashes_calculate_parser.add_argument(
+        "--source", required=True, dest="source_name", help="Name of the registered source."
+    )
+    hashes_calculate_parser.add_argument(
+        "--root", required=True, type=Path, help="Physical source root used by the inventory scan."
+    )
+    hashes_calculate_parser.add_argument(
+        "--media-type",
+        choices=("photos", "videos", "all"),
+        default="all",
+        help="Restrict hashing to photos, videos, or all inventoried files.",
+    )
+    hashes_calculate_parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Hash again even when an identical successful result is cached.",
+    )
+    hashes_calculate_parser.set_defaults(handler=_handle_hashes_calculate)
+
+    hashes_list_parser = hashes_commands.add_parser(
+        "list", help="List current SHA-256 values for one source."
+    )
+    hashes_list_parser.add_argument(
+        "--library", required=True, help="Name of the existing logical library."
+    )
+    hashes_list_parser.add_argument(
+        "--source", required=True, dest="source_name", help="Name of the registered source."
+    )
+    hashes_list_parser.set_defaults(handler=_handle_hashes_list)
     return parser
 
 
@@ -602,6 +643,50 @@ def _handle_associations_list(args: argparse.Namespace, config: AppConfig) -> in
     return 0
 
 
+def _handle_hashes_calculate(args: argparse.Namespace, config: AppConfig) -> int:
+    profile = config.profile(args.profile)
+    summary = run_hashing(
+        HashRequest(
+            database=profile.database,
+            environment=profile.environment,
+            library_name=args.library,
+            source_name=args.source_name,
+            root=args.root,
+            media_filter=args.media_type,
+            batch_size=config.hash_batch_size,
+            chunk_size_bytes=config.hash_chunk_size_bytes,
+            generated_paths=_generated_paths(config, args.profile),
+            force=args.force,
+        )
+    )
+    print(f"Selected: {summary.selected_count}")
+    print(f"Hashed: {summary.hashed_count}")
+    print(f"Cached: {summary.cached_count}")
+    print(f"Errors: {summary.error_count}")
+    print(f"Bytes hashed: {summary.bytes_hashed}")
+    return 1 if summary.error_count else 0
+
+
+def _handle_hashes_list(args: argparse.Namespace, config: AppConfig) -> int:
+    profile = config.profile(args.profile)
+    rows = list_hashes(
+        profile.database,
+        profile.environment,
+        args.library,
+        args.source_name,
+    )
+    if not rows:
+        print("No hashes found.")
+        return 0
+    print("PATH\tTYPE\tSIZE_BYTES\tSHA256\tFINISHED_AT")
+    for row in rows:
+        print(
+            f"{row.relative_path}\t{row.media_type}\t{row.size_bytes}\t"
+            f"{row.digest}\t{row.finished_at}"
+        )
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the CLI and convert expected failures into concise messages."""
     parser = build_parser()
@@ -621,7 +706,11 @@ def main(argv: Sequence[str] | None = None) -> int:
             command_name = f"dates-{args.dates_command}"
         elif getattr(args, "associations_command", None):
             command_name = f"associations-{args.associations_command}"
-        if args.command in {"scan", "metadata"}:
+        elif getattr(args, "hashes_command", None):
+            command_name = f"hashes-{args.hashes_command}"
+        if args.command in {"scan", "metadata"} or (
+            args.command == "hashes" and args.hashes_command == "calculate"
+        ):
             ensure_external_working_paths(
                 args.root,
                 _generated_paths(config, args.profile),

@@ -27,6 +27,8 @@ class ConfigTests(unittest.TestCase):
             self.assertEqual(config.ffprobe_command, "ffprobe")
             self.assertEqual(config.date_batch_size, 500)
             self.assertFalse(config.date_allow_filesystem_fallback)
+            self.assertEqual(config.hash_batch_size, 100)
+            self.assertEqual(config.hash_chunk_size_bytes, 8 * 1024 * 1024)
             self.assertFalse(config.scan_include_hidden)
             self.assertEqual(config.scan_batch_size, 500)
 
@@ -83,6 +85,18 @@ class ConfigTests(unittest.TestCase):
             config_path = base / "invalid-dates.toml"
             config_path.write_text(
                 "[dates]\nfuture_tolerance_days = -1\n",
+                encoding="utf-8",
+            )
+
+            with self.assertRaises(ConfigurationError):
+                load_config(config_path, base_directory=base)
+
+    def test_hash_chunk_size_must_be_positive(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            base = Path(temporary_directory)
+            config_path = base / "invalid-hashing.toml"
+            config_path.write_text(
+                "[hashing]\nchunk_size_bytes = 0\n",
                 encoding="utf-8",
             )
 

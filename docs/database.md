@@ -23,9 +23,9 @@ Source default timezones use IANA names such as `Europe/Madrid`. A source does n
 - `scan_error` stores non-fatal warnings and errors with relative paths and processing stages.
 - `scan_checkpoint` temporarily stores committed per-entry progress for interrupted-scan recovery.
 
-A repeated scan of the same source-relative path updates the existing `media_file` and `file_location` rows rather than creating duplicates. Exact content identity will be added later through streaming SHA-256; path identity is intentionally not treated as content identity.
+A repeated scan of the same source-relative path updates the existing `media_file` and `file_location` rows rather than creating duplicates. Path identity is intentionally not treated as content identity.
 
-The current inventory schema precedes exact content identity. The provenance phase will migrate it without discarding records so that a logical content item can reference multiple immutable file observations. `file_location` data must not be collapsed merely because observations later share a SHA-256 hash.
+The current inventory schema precedes logical content identity. The provenance phase will migrate it without discarding records so that a logical content item can reference multiple immutable file observations. `file_location` data must not be collapsed merely because observations share a SHA-256 hash.
 
 Absolute scan roots are retained in `scan.root_path_snapshot` for traceability only. Portable file location queries use `file_location.relative_path`.
 
@@ -37,6 +37,15 @@ Checkpoints are written in the same transaction as inventory changes and progres
 - `media_metadata` stores the latest successful normalized values for fast queries. These include geometry, panorama state, video duration, codecs, bitrate, frame rate, rotation, dynamic range, audio properties, and selected camera fields.
 
 File size remains on both `media_file` and `file_location` because it belongs to inventory identity and precondition validation. Duration is stored as integer milliseconds in `media_metadata` to avoid floating-point comparison ambiguity.
+
+## Hash Tables
+
+- `hash_attempt` is immutable history for every SHA-256 calculation attempt. It records the cataloged input signature, byte count, timing, digest on success, and structured error information on failure.
+- `media_hash` points each current `media_file` record to its latest successful SHA-256 attempt for efficient lookup.
+
+Hashing streams bounded chunks from a validated cataloged path. A cached success is reusable only when the algorithm, cataloged size, and cataloged modification timestamp all match. Hashing records an error and continues with other files when a file is missing, unsafe, changed, or unreadable.
+
+The current hash does not yet create a logical `media_item` or collapse inventory paths. The next duplicate-grouping stage will use equal SHA-256 values as exact-content evidence while retaining every physical observation for the later provenance migration.
 
 ## Planned Provenance Tables
 

@@ -44,6 +44,8 @@ class AppConfig:
     date_suspicious_year_at_or_before: int
     date_filesystem_gap_days: int
     date_allow_filesystem_fallback: bool
+    hash_batch_size: int
+    hash_chunk_size_bytes: int
     scan_include_hidden: bool
     scan_batch_size: int
 
@@ -96,6 +98,7 @@ DEFAULTS: dict[str, Any] = {
         "filesystem_gap_days": 3650,
         "allow_filesystem_fallback": False,
     },
+    "hashing": {"batch_size": 100, "chunk_size_bytes": 8 * 1024 * 1024},
     "scan": {"include_hidden": False, "batch_size": 500},
 }
 
@@ -138,6 +141,7 @@ def load_config(
     safety = values["safety"]
     metadata = values["metadata"]
     dates = values["dates"]
+    hashing = values["hashing"]
     scan = values["scan"]
 
     profiles: dict[str, ProfileConfig] = {}
@@ -192,6 +196,13 @@ def load_config(
     if suspicious_year < 1 or filesystem_gap_days < 0:
         raise ConfigurationError("Suspicious-date limits are invalid.")
 
+    hash_batch_size = int(hashing["batch_size"])
+    hash_chunk_size_bytes = int(hashing["chunk_size_bytes"])
+    if hash_batch_size < 1:
+        raise ConfigurationError("The hashing batch size must be at least 1.")
+    if hash_chunk_size_bytes < 1:
+        raise ConfigurationError("The hashing chunk size must be at least 1 byte.")
+
     scan_batch_size = int(scan["batch_size"])
     if scan_batch_size < 1:
         raise ConfigurationError("The scan batch size must be at least 1.")
@@ -218,6 +229,8 @@ def load_config(
         date_suspicious_year_at_or_before=suspicious_year,
         date_filesystem_gap_days=filesystem_gap_days,
         date_allow_filesystem_fallback=bool(dates["allow_filesystem_fallback"]),
+        hash_batch_size=hash_batch_size,
+        hash_chunk_size_bytes=hash_chunk_size_bytes,
         scan_include_hidden=bool(scan["include_hidden"]),
         scan_batch_size=scan_batch_size,
     )

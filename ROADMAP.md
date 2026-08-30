@@ -43,7 +43,7 @@
 ## V1.4 — Exact Duplicates
 
 - [ ] Size-based candidate generation
-- [ ] Streaming SHA-256
+- [x] Streaming SHA-256
 - [ ] Exact duplicate groups
 - [ ] Configurable preferred-source ranking
 - [ ] Review reports

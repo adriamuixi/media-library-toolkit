@@ -322,6 +322,55 @@ environment = "TEST"
             self.assertIn("must remain outside the media root", error.getvalue())
             self.assertFalse(unsafe_logs.exists())
 
+    def test_cli_calculates_and_lists_hashes(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            base = Path(temporary_directory)
+            media_root = base / "media"
+            media_root.mkdir()
+            (media_root / "synthetic.jpg").write_bytes(b"synthetic-photo")
+            config_path = self._write_config(base)
+            previous_cwd = Path.cwd()
+            output = StringIO()
+            try:
+                __import__("os").chdir(base)
+                with redirect_stdout(output):
+                    commands = [
+                        ["--config", str(config_path), "--profile", "test", "init"],
+                        [
+                            "--config", str(config_path), "--profile", "test",
+                            "library", "add", "Personal Media",
+                        ],
+                        [
+                            "--config", str(config_path), "--profile", "test",
+                            "source", "add", "--library", "Personal Media",
+                            "--name", "Synthetic Camera", "--type", "camera",
+                        ],
+                        [
+                            "--config", str(config_path), "--profile", "test", "scan",
+                            "--library", "Personal Media", "--source", "Synthetic Camera",
+                            "--root", str(media_root),
+                        ],
+                        [
+                            "--config", str(config_path), "--profile", "test", "hashes",
+                            "calculate", "--library", "Personal Media", "--source",
+                            "Synthetic Camera", "--root", str(media_root),
+                        ],
+                        [
+                            "--config", str(config_path), "--profile", "test", "hashes",
+                            "list", "--library", "Personal Media", "--source",
+                            "Synthetic Camera",
+                        ],
+                    ]
+                    for command in commands:
+                        self.assertEqual(main(command), 0)
+            finally:
+                __import__("os").chdir(previous_cwd)
+
+            rendered = output.getvalue()
+            self.assertIn("Hashed: 1", rendered)
+            self.assertIn("PATH" + "\t" + "TYPE" + "\t" + "SIZE_BYTES" + "\t" + "SHA256" + "\t" + "FINISHED_AT", rendered)
+            self.assertIn("synthetic.jpg", rendered)
+
 
 if __name__ == "__main__":
     unittest.main()

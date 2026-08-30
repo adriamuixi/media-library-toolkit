@@ -17,7 +17,11 @@ from media_toolkit.errors import CatalogError
 from media_toolkit.metadata.exiftool import ExifToolAdapter
 from media_toolkit.metadata.ffprobe import FfprobeAdapter
 from media_toolkit.metadata.models import MetadataAdapter, NormalizedMetadata, ToolStatus
-from media_toolkit.scan.safety import ensure_external_working_paths, resolve_media_root
+from media_toolkit.scan.safety import (
+    ensure_external_working_paths,
+    resolve_cataloged_file,
+    resolve_media_root,
+)
 
 
 LOGGER = logging.getLogger(__name__)
@@ -235,21 +239,6 @@ def _record_success(
     )
 
 
-def _media_path(root: Path, relative_path: str) -> Path:
-    relative = Path(relative_path)
-    candidate = root
-    for part in relative.parts:
-        candidate = candidate / part
-        if candidate.is_symlink():
-            raise CatalogError("The cataloged path contains a symbolic link.")
-    resolved = candidate.resolve(strict=True)
-    if resolved != root and root not in resolved.parents:
-        raise CatalogError("The cataloged path resolves outside the selected media root.")
-    if not resolved.is_file():
-        raise CatalogError("The cataloged path is not a regular file.")
-    return resolved
-
-
 def run_metadata(
     request: MetadataRequest,
     adapters: Mapping[str, MetadataAdapter] | None = None,
@@ -298,7 +287,7 @@ def run_metadata(
                 pending += 1
             else:
                 try:
-                    path = _media_path(root, row["relative_path"])
+                    path = resolve_cataloged_file(root, row["relative_path"])
                     file_status = path.stat()
                     if (
                         file_status.st_size != row["size_bytes"]

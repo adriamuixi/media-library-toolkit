@@ -2,13 +2,15 @@
 
 Media Library Toolkit is a local, safety-first command-line application for building a durable catalog of personal photographs and videos. It is designed for large libraries, repeatable imports, exact duplicate detection, traceable naming, and controlled year-based organization.
 
-The project is being built incrementally. The current release provides the Foundation layer, read-only inventory scans, and cached photo and video metadata extraction.
+The project is being built incrementally. The current release provides the Foundation layer, read-only inventory scans, cached photo and video metadata extraction, capture-date resolution, media associations, and streaming SHA-256 calculation.
 
 ## Safety
 
 Original media is read-only by default. No command may delete, move, rename, overwrite, or modify original media unless it belongs to an explicitly reviewed WRITE workflow.
 
 Scan and metadata commands inspect files but never modify them.
+
+The `media hashes calculate` command reads cataloged files in bounded chunks, records immutable success or error history in SQLite, and never modifies media content or metadata. It refuses a file whose size or modification timestamp has changed since inventory, or while hashing is in progress.
 
 Historical provenance is treated as immutable catalog data. Before physical organization is implemented, the catalog will retain each original filename, original relative path, source, import batch, source-folder context, current location, and every observed location of exact duplicate content. See [docs/provenance.md](docs/provenance.md).
 
@@ -161,6 +163,22 @@ media associations list \
 
 Live Photos prefer matching embedded content identifiers and fall back conservatively to compatible basenames. RAW/JPEG pairs and sidecars use deterministic same-directory basename rules. Ambiguous matches remain explicit `CONFLICT` records.
 
+Calculate exact SHA-256 values after a scan:
+
+```bash
+media hashes calculate \
+  --library "Personal Media" \
+  --source "iPhone Personal" \
+  --root "/Volumes/SMALL_TEST_LIBRARY" \
+  --media-type all
+
+media hashes list \
+  --library "Personal Media" \
+  --source "iPhone Personal"
+```
+
+Hashing is READ ONLY. Successful unchanged file signatures are reused by default; `--force` creates a new immutable hash-attempt record after reading the file again.
+
 The reset command always refuses a production profile and any database whose internal environment marker is not `TEST`.
 
 ## Configuration
@@ -190,6 +208,8 @@ media dates resolve
 media dates list
 media associations detect
 media associations list
+media hashes calculate
+media hashes list
 ```
 
 Use `media COMMAND --help` for command-specific help.

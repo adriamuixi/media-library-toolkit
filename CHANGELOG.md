@@ -55,6 +55,11 @@ The project intends to follow Semantic Versioning once stable public releases be
 - Added explicit association confidence and conflict states.
 - Added idempotent relation refresh with inactive history preservation.
 - Added `media associations detect` and filterable `media associations list` commands.
+- Added the READ ONLY `media hashes calculate` command with bounded streaming SHA-256 reads.
+- Added immutable SHA-256 success and error attempt history plus efficient current-hash lookup.
+- Added hash caching by cataloged size and modification-time signature, with opt-in forced recalculation.
+- Added per-file hash safety checks before and after reads without media mutation.
+- Added `media hashes list` for deterministic current-hash inspection.
 - Designed a staged V1 Local Media Browser for the organized library.
 - Selected an optional Flask, server-rendered HTML, CSS, and vanilla JavaScript architecture.
 - Defined loopback-only serving, media-ID path resolution, external thumbnail caching, and unconditional `toAnalyze` exclusion.
