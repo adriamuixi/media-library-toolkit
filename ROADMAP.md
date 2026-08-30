@@ -65,8 +65,8 @@
 - [x] Deterministic rename plans
 - [x] Year and `no_date` organization plans
 - [x] Associated-file planning
-- [ ] Conflict validation
-- [ ] CSV and JSON exports
+- [x] Conflict validation
+- [x] CSV and JSON exports
 
 ## V1.7 — Local Review
 

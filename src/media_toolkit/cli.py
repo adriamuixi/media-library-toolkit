@@ -46,7 +46,11 @@ from media_toolkit.metadata.exiftool import ExifToolAdapter
 from media_toolkit.metadata.ffprobe import FfprobeAdapter
 from media_toolkit.metadata.service import MetadataRequest, run_metadata
 from media_toolkit.provenance.service import export_provenance
-from media_toolkit.planning.service import create_year_or_no_date_plan
+from media_toolkit.planning.service import (
+    create_year_or_no_date_plan,
+    export_plan,
+    list_plan_items,
+)
 from media_toolkit.scan.safety import ensure_external_working_paths
 from media_toolkit.scan.service import ScanRequest, run_scan
 
@@ -446,6 +450,20 @@ def build_parser() -> argparse.ArgumentParser:
     )
     plan_create_parser.add_argument("--library", required=True)
     plan_create_parser.set_defaults(handler=_handle_plan_create)
+    plan_list_parser = plan_commands.add_parser(
+        "list", help="List reviewable items from an existing organization plan."
+    )
+    plan_list_parser.add_argument("--id", required=True, dest="plan_id")
+    plan_list_parser.set_defaults(handler=_handle_plan_list)
+    plan_export_parser = plan_commands.add_parser(
+        "export", help="Write an external CSV or JSON organization plan export."
+    )
+    plan_export_parser.add_argument("--id", required=True, dest="plan_id")
+    plan_export_parser.add_argument("--output", required=True, type=Path)
+    plan_export_parser.add_argument(
+        "--format", choices=("csv", "json"), default="csv", dest="report_format"
+    )
+    plan_export_parser.set_defaults(handler=_handle_plan_export)
     return parser
 
 
@@ -919,6 +937,30 @@ def _handle_plan_create(args: argparse.Namespace, config: AppConfig) -> int:
     print(f"Items: {summary.item_count}")
     print(f"Conflicts: {summary.conflict_count}")
     print(f"Checksum: {summary.checksum}")
+    return 0
+
+
+def _handle_plan_list(args: argparse.Namespace, config: AppConfig) -> int:
+    profile = config.profile(args.profile)
+    rows = list_plan_items(profile.database, profile.environment, args.plan_id)
+    if not rows:
+        print("No plan items found.")
+        return 0
+    for row in rows:
+        print(
+            f"{row.status}\t{row.destination_relative_path}\t"
+            f"{row.association_group_key or '-'}\t{row.reason or '-'}"
+        )
+    return 0
+
+
+def _handle_plan_export(args: argparse.Namespace, config: AppConfig) -> int:
+    profile = config.profile(args.profile)
+    count = export_plan(
+        profile.database, profile.environment, args.plan_id, args.output, args.report_format
+    )
+    print(f"Plan export rows: {count}")
+    print(f"Report: {args.output.expanduser().resolve()}")
     return 0
 
 

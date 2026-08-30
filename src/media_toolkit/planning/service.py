@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
+import csv
 from hashlib import sha256
 import json
 from pathlib import Path
@@ -23,6 +24,16 @@ class PlanSummary:
     item_count: int
     conflict_count: int
     checksum: str
+
+
+@dataclass(frozen=True)
+class PlanItemRecord:
+    """One reviewable organization plan item."""
+
+    destination_relative_path: str
+    association_group_key: str | None
+    status: str
+    reason: str | None
 
 
 @dataclass(frozen=True)
@@ -178,3 +189,77 @@ def create_year_or_no_date_plan(
                 ),
             )
     return PlanSummary(plan_id, status, len(proposed), conflicts, checksum)
+
+
+def list_plan_items(
+    database: Path, environment: str, plan_id: str
+) -> list[PlanItemRecord]:
+    """List one plan's deterministic review items without modifying the catalog."""
+    require_database(database, environment)
+    with open_database(database) as connection:
+        rows = connection.execute(
+            """
+            SELECT item.destination_relative_path, item.association_group_key,
+                   item.status, item.reason
+            FROM organization_plan_item AS item
+            JOIN organization_plan AS plan ON plan.plan_id = item.plan_id
+            JOIN library AS library ON library.library_id = plan.library_id
+            WHERE item.plan_id = ? AND library.environment = ?
+            ORDER BY item.destination_relative_path, item.plan_item_id
+            """,
+            (plan_id, environment.upper()),
+        ).fetchall()
+    return [PlanItemRecord(**dict(row)) for row in rows]
+
+
+def export_plan(
+    database: Path, environment: str, plan_id: str, output: Path, report_format: str
+) -> int:
+    """Write one exclusive external CSV or JSON plan review export."""
+    require_database(database, environment)
+    destination = output.expanduser().resolve()
+    if destination.exists():
+        raise CatalogError(f"Plan export already exists: {destination}")
+    with open_database(database) as connection:
+        roots = connection.execute(
+            """
+            SELECT DISTINCT scan.root_path_snapshot
+            FROM organization_plan AS plan
+            JOIN scan ON scan.library_id = plan.library_id
+            WHERE plan.plan_id = ?
+            """,
+            (plan_id,),
+        ).fetchall()
+        for root_row in roots:
+            root = Path(root_row["root_path_snapshot"]).expanduser().resolve()
+            if destination == root or destination.is_relative_to(root):
+                raise CatalogError("Plan exports must remain outside media roots.")
+        row = connection.execute(
+            """
+            SELECT plan.plan_id, plan.status AS plan_status, plan.strategy, plan.checksum,
+                   item.observation_id, item.media_id, item.destination_relative_path,
+                   item.association_group_key, item.status AS item_status, item.reason
+            FROM organization_plan AS plan
+            JOIN library AS library ON library.library_id = plan.library_id
+            JOIN organization_plan_item AS item ON item.plan_id = plan.plan_id
+            WHERE plan.plan_id = ? AND library.environment = ?
+            ORDER BY item.destination_relative_path, item.plan_item_id
+            """,
+            (plan_id, environment.upper()),
+        ).fetchall()
+    if not row:
+        raise CatalogError(f"Plan '{plan_id}' does not exist in the selected profile.")
+    values = [dict(item) for item in row]
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    if report_format == "csv":
+        with destination.open("x", newline="", encoding="utf-8") as handle:
+            writer = csv.DictWriter(handle, fieldnames=tuple(values[0]))
+            writer.writeheader()
+            writer.writerows(values)
+    elif report_format == "json":
+        with destination.open("x", encoding="utf-8") as handle:
+            json.dump(values, handle, ensure_ascii=False, indent=2)
+            handle.write("\n")
+    else:
+        raise CatalogError(f"Unsupported plan export format: {report_format}.")
+    return len(values)

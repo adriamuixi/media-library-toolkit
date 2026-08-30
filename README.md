@@ -220,6 +220,8 @@ media duplicates exact
 media duplicates report
 media provenance export
 media plan create --library LIBRARY
+media plan list --id PLAN_ID
+media plan export --id PLAN_ID --output PATH
 ```
 
 Use `media COMMAND --help` for command-specific help.

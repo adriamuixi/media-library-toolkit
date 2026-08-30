@@ -12,6 +12,8 @@ The project intends to follow Semantic Versioning once stable public releases be
 
 - Added association-aware organization planning that keeps detected related files in one planned year directory.
 
+- Added explicit plan conflict and association-ambiguity blocking, plus external CSV and JSON plan review exports.
+
 - Added mandatory provenance validation for all future WRITE plans.
 
 - Added append-only current-location history for every historical observation.
