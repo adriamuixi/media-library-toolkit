@@ -51,6 +51,13 @@ Each observation must retain at least its original filename, original relative p
 
 Catalog backups use SQLite's consistent online backup mechanism rather than copying an active database file directly. CSV and JSON provenance exports are secondary open-format safeguards, not the catalog of record.
 
+## Capture-Date Tables
+
+- `date_resolution_attempt` retains immutable resolution history, complete candidate evidence as JSON, review reasons, input signatures, local and UTC values, timezone provenance, selected source, and confidence.
+- `media_date_resolution` points to the current resolution for fast queries without deleting older attempts.
+
+The local capture value and precision are always kept when a date is selected. UTC is nullable because cameras commonly omit an offset. A source's configured IANA timezone can supply the conversion while remaining visibly identified as source-derived rather than embedded metadata. Date-only evidence is marked explicitly so a storage placeholder cannot be mistaken for a captured midnight time.
+
 ## Migrations
 
 Migrations are ordered SQL files in `src/media_toolkit/catalog/migrations/`. Applied SQL is identified by version and SHA-256 checksum. Editing an already applied migration causes a hard failure; schema changes require a new migration.

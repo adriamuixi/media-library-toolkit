@@ -38,6 +38,12 @@ class AppConfig:
     metadata_timeout_seconds: int
     exiftool_command: str
     ffprobe_command: str
+    date_batch_size: int
+    date_future_tolerance_days: int
+    date_conflict_tolerance_seconds: int
+    date_suspicious_year_at_or_before: int
+    date_filesystem_gap_days: int
+    date_allow_filesystem_fallback: bool
     scan_include_hidden: bool
     scan_batch_size: int
 
@@ -82,6 +88,14 @@ DEFAULTS: dict[str, Any] = {
         "exiftool_command": "exiftool",
         "ffprobe_command": "ffprobe",
     },
+    "dates": {
+        "batch_size": 500,
+        "future_tolerance_days": 2,
+        "conflict_tolerance_seconds": 86400,
+        "suspicious_year_at_or_before": 1980,
+        "filesystem_gap_days": 3650,
+        "allow_filesystem_fallback": False,
+    },
     "scan": {"include_hidden": False, "batch_size": 500},
 }
 
@@ -123,6 +137,7 @@ def load_config(
     paths = values["paths"]
     safety = values["safety"]
     metadata = values["metadata"]
+    dates = values["dates"]
     scan = values["scan"]
 
     profiles: dict[str, ProfileConfig] = {}
@@ -165,6 +180,18 @@ def load_config(
     if not exiftool_command or not ffprobe_command:
         raise ConfigurationError("Metadata tool commands cannot be empty.")
 
+    date_batch_size = int(dates["batch_size"])
+    future_tolerance_days = int(dates["future_tolerance_days"])
+    conflict_tolerance_seconds = int(dates["conflict_tolerance_seconds"])
+    suspicious_year = int(dates["suspicious_year_at_or_before"])
+    filesystem_gap_days = int(dates["filesystem_gap_days"])
+    if date_batch_size < 1:
+        raise ConfigurationError("The date-resolution batch size must be at least 1.")
+    if future_tolerance_days < 0 or conflict_tolerance_seconds < 0:
+        raise ConfigurationError("Date tolerances cannot be negative.")
+    if suspicious_year < 1 or filesystem_gap_days < 0:
+        raise ConfigurationError("Suspicious-date limits are invalid.")
+
     scan_batch_size = int(scan["batch_size"])
     if scan_batch_size < 1:
         raise ConfigurationError("The scan batch size must be at least 1.")
@@ -185,6 +212,12 @@ def load_config(
         metadata_timeout_seconds=metadata_timeout_seconds,
         exiftool_command=exiftool_command,
         ffprobe_command=ffprobe_command,
+        date_batch_size=date_batch_size,
+        date_future_tolerance_days=future_tolerance_days,
+        date_conflict_tolerance_seconds=conflict_tolerance_seconds,
+        date_suspicious_year_at_or_before=suspicious_year,
+        date_filesystem_gap_days=filesystem_gap_days,
+        date_allow_filesystem_fallback=bool(dates["allow_filesystem_fallback"]),
         scan_include_hidden=bool(scan["include_hidden"]),
         scan_batch_size=scan_batch_size,
     )

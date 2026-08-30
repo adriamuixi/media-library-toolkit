@@ -1,0 +1,1 @@
+"""Deterministic capture-date resolution."""

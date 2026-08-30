@@ -21,6 +21,11 @@ from media_toolkit.catalog.repositories import (
     register_source,
 )
 from media_toolkit.config import AppConfig, load_config
+from media_toolkit.dates.service import (
+    DateResolutionRequest,
+    list_date_resolutions,
+    run_date_resolution,
+)
 from media_toolkit.errors import MediaToolkitError
 from media_toolkit.logging_config import configure_logging
 from media_toolkit.metadata.exiftool import ExifToolAdapter
@@ -207,6 +212,48 @@ def build_parser() -> argparse.ArgumentParser:
         help="Extract again even when an identical successful result is cached.",
     )
     metadata_parser.set_defaults(handler=_handle_metadata)
+
+    dates_parser = commands.add_parser(
+        "dates", help="Resolve or review effective capture dates from cataloged evidence."
+    )
+    dates_commands = dates_parser.add_subparsers(dest="dates_command", required=True)
+    dates_resolve_parser = dates_commands.add_parser(
+        "resolve", help="Resolve effective capture dates without modifying media."
+    )
+    dates_resolve_parser.add_argument(
+        "--library", required=True, help="Name of the existing logical library."
+    )
+    dates_resolve_parser.add_argument(
+        "--source", required=True, dest="source_name", help="Name of the registered source."
+    )
+    dates_resolve_parser.add_argument(
+        "--media-type",
+        choices=("photos", "videos", "all"),
+        default="all",
+        help="Restrict resolution to photos, videos, or both.",
+    )
+    dates_resolve_parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Create a new resolution attempt even when the inputs are unchanged.",
+    )
+    dates_resolve_parser.set_defaults(handler=_handle_dates_resolve)
+
+    dates_list_parser = dates_commands.add_parser(
+        "list", help="List current effective dates and unresolved review states."
+    )
+    dates_list_parser.add_argument(
+        "--library", required=True, help="Name of the existing logical library."
+    )
+    dates_list_parser.add_argument(
+        "--source", required=True, dest="source_name", help="Name of the registered source."
+    )
+    dates_list_parser.add_argument(
+        "--status",
+        choices=("resolved", "suspicious", "conflict", "no-date"),
+        help="Optionally restrict output to one review state.",
+    )
+    dates_list_parser.set_defaults(handler=_handle_dates_list)
     return parser
 
 
@@ -411,6 +458,58 @@ def _handle_metadata(args: argparse.Namespace, config: AppConfig) -> int:
     return 1 if summary.error_count else 0
 
 
+def _handle_dates_resolve(args: argparse.Namespace, config: AppConfig) -> int:
+    profile = config.profile(args.profile)
+    summary = run_date_resolution(
+        DateResolutionRequest(
+            database=profile.database,
+            environment=profile.environment,
+            library_name=args.library,
+            source_name=args.source_name,
+            media_filter=args.media_type,
+            batch_size=config.date_batch_size,
+            future_tolerance_days=config.date_future_tolerance_days,
+            conflict_tolerance_seconds=config.date_conflict_tolerance_seconds,
+            suspicious_year_at_or_before=config.date_suspicious_year_at_or_before,
+            filesystem_gap_days=config.date_filesystem_gap_days,
+            allow_filesystem_fallback=config.date_allow_filesystem_fallback,
+            force=args.force,
+        )
+    )
+    print(f"Selected: {summary.selected_count}")
+    print(f"Resolved: {summary.resolved_count}")
+    print(f"Suspicious: {summary.suspicious_count}")
+    print(f"Conflicts: {summary.conflict_count}")
+    print(f"No date: {summary.no_date_count}")
+    print(f"Cached: {summary.cached_count}")
+    return 0
+
+
+def _handle_dates_list(args: argparse.Namespace, config: AppConfig) -> int:
+    profile = config.profile(args.profile)
+    selected_status = args.status.upper().replace("-", "_") if args.status else None
+    rows = list_date_resolutions(
+        profile.database,
+        profile.environment,
+        args.library,
+        args.source_name,
+        selected_status,
+    )
+    if not rows:
+        print("No date resolutions found.")
+        return 0
+    print("PATH\tTYPE\tSTATUS\tLOCAL_DATE\tTIMEZONE\tSOURCE\tPRECISION\tCONFIDENCE\tREASONS")
+    for row in rows:
+        print(
+            f"{row.relative_path}\t{row.media_type}\t{row.status}\t"
+            f"{row.effective_capture_local or ''}\t{row.capture_timezone or ''}\t"
+            f"{row.capture_date_source or ''}\t{row.capture_date_precision}\t"
+            f"{row.capture_date_confidence}\t"
+            f"{','.join(row.reasons)}"
+        )
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the CLI and convert expected failures into concise messages."""
     parser = build_parser()
@@ -426,6 +525,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             command_name = f"source-{args.source_command}"
         elif getattr(args, "tools_command", None):
             command_name = f"tools-{args.tools_command}"
+        elif getattr(args, "dates_command", None):
+            command_name = f"dates-{args.dates_command}"
         if args.command in {"scan", "metadata"}:
             ensure_external_working_paths(
                 args.root,

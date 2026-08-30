@@ -58,3 +58,17 @@ batch_size = 500
 Hidden files and directories are excluded by default. The batch size controls how often scan progress and inventory changes are committed to SQLite. A smaller value preserves progress more frequently; a larger value reduces transaction overhead.
 
 Symbolic links are never followed in the current scanner and cannot be enabled through configuration.
+
+## Date Resolution
+
+```toml
+[dates]
+batch_size = 500
+future_tolerance_days = 2
+conflict_tolerance_seconds = 86400
+suspicious_year_at_or_before = 1980
+filesystem_gap_days = 3650
+allow_filesystem_fallback = false
+```
+
+Date resolution is catalog-only and commits in batches. Tolerances control review flags; they do not rewrite source values. Filesystem fallback is disabled by default because modification and birth times may describe copying or import rather than capture. Enabling it produces low-confidence `SUSPICIOUS` results when no stronger evidence exists.

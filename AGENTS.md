@@ -62,6 +62,9 @@ The Foundation, V1.1 inventory, and V1.2 metadata phases are implemented. The pr
 - normalized geometry, panorama, duration, codec, stream, and camera fields;
 - raw extractor JSON and signature-based metadata caching;
 - per-file metadata errors that do not abort the complete run.
+- deterministic effective capture-date resolution from cataloged evidence;
+- explicit date confidence, timezone provenance, suspicious, conflict, and no-date states;
+- immutable date-resolution history with current-result pointers and input caching.
 
 Explicit missing-file reconciliation has not yet been implemented.
 
@@ -91,6 +94,16 @@ Explicit missing-file reconciliation has not yet been implemented.
 - Store a queryable panorama flag and the reason that produced it.
 - Panorama classification must be deterministic and configurable rather than inferred from filenames.
 - Preserve authoritative projection metadata, such as equirectangular or spherical markers, when available.
+
+## Capture Dates
+
+- Preserve every parsed candidate and its original value; never retain only the selected date.
+- Date priority must be deterministic and specific to photo or video metadata.
+- Store local capture time separately from UTC because many cameras provide no offset.
+- Record whether timezone came from metadata, source configuration, or the filesystem.
+- Never silently resolve contradictory metadata, implausible years, future dates, or ambiguous local times.
+- Filesystem capture-date fallback must remain explicitly configurable and disabled by default.
+- `NO_DATE` is valid catalog state and must never be replaced with an invented date.
 
 ## Coding Conventions
 

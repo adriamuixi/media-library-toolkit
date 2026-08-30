@@ -25,6 +25,8 @@ class ConfigTests(unittest.TestCase):
             self.assertEqual(config.metadata_timeout_seconds, 60)
             self.assertEqual(config.exiftool_command, "exiftool")
             self.assertEqual(config.ffprobe_command, "ffprobe")
+            self.assertEqual(config.date_batch_size, 500)
+            self.assertFalse(config.date_allow_filesystem_fallback)
             self.assertFalse(config.scan_include_hidden)
             self.assertEqual(config.scan_batch_size, 500)
 
@@ -69,6 +71,18 @@ class ConfigTests(unittest.TestCase):
             config_path = base / "invalid-metadata.toml"
             config_path.write_text(
                 '[metadata]\nbatch_size = 0\nexiftool_command = ""\n',
+                encoding="utf-8",
+            )
+
+            with self.assertRaises(ConfigurationError):
+                load_config(config_path, base_directory=base)
+
+    def test_date_tolerances_cannot_be_negative(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            base = Path(temporary_directory)
+            config_path = base / "invalid-dates.toml"
+            config_path.write_text(
+                "[dates]\nfuture_tolerance_days = -1\n",
                 encoding="utf-8",
             )
 

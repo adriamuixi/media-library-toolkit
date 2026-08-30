@@ -43,3 +43,10 @@ The project intends to follow Semantic Versioning once stable public releases be
 - Documented immutable historical provenance as a mandatory V1 feature before physical organization.
 - Defined import batches, logical content identity, and multiple historical file observations.
 - Added catalog backup and open-format provenance export as prerequisites for production WRITE.
+- Added catalog-only effective capture-date resolution for photos and videos.
+- Added separate local and UTC capture values with metadata, source, and filesystem timezone provenance.
+- Added immutable candidate evidence and cached resolution history.
+- Added `RESOLVED`, `SUSPICIOUS`, `CONFLICT`, and `NO_DATE` review states.
+- Added conservative filename parsing and opt-in low-confidence filesystem fallback.
+- Added future, early-year, contradictory metadata, filesystem-gap, and daylight-saving-time review reasons.
+- Added `media dates resolve` and filterable `media dates list` commands.

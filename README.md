@@ -129,6 +129,22 @@ media metadata \
 
 Successful results are cached by extractor version, cataloged size and modification time, and normalization configuration. Use `--force` only when an intentional re-extraction is required. If a file changed after its scan, metadata extraction records an error and asks for a new scan.
 
+Resolve effective capture dates from cataloged metadata and filename evidence:
+
+```bash
+media dates resolve \
+  --library "Personal Media" \
+  --source "iPhone Personal" \
+  --media-type all
+
+media dates list \
+  --library "Personal Media" \
+  --source "iPhone Personal" \
+  --status conflict
+```
+
+Resolution never hides uncertainty. Current states are `RESOLVED`, `SUSPICIOUS`, `CONFLICT`, and `NO_DATE`. Filesystem fallback is disabled by default because a copied file's modification time is not reliable capture evidence.
+
 The reset command always refuses a production profile and any database whose internal environment marker is not `TEST`.
 
 ## Configuration
@@ -154,6 +170,8 @@ media source list
 media scan
 media tools check
 media metadata
+media dates resolve
+media dates list
 ```
 
 Use `media COMMAND --help` for command-specific help.

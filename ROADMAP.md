@@ -33,9 +33,9 @@
 
 ## V1.3 — Dates and Associations
 
-- [ ] Effective capture date resolution
-- [ ] Confidence and suspicious-date states
-- [ ] Timezone handling
+- [x] Effective capture date resolution
+- [x] Confidence and suspicious-date states
+- [x] Timezone handling
 - [ ] Live Photo associations
 - [ ] RAW and JPEG associations
 - [ ] Sidecar associations
