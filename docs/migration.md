@@ -58,6 +58,8 @@ cd media-library-toolkit
 source .venv/bin/activate
 ```
 
+The same bootstrap command supports macOS through Homebrew and Debian or Ubuntu through apt.
+
 Use the same Git commit when possible:
 
 ```bash

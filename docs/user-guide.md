@@ -38,6 +38,8 @@ cd media-library-toolkit
 source .venv/bin/activate
 ```
 
+On macOS, the same command uses Homebrew and requires it to be installed first. It installs Python, ExifTool, and ffmpeg.
+
 Create a disposable test catalog:
 
 ```bash

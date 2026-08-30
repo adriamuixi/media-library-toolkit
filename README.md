@@ -40,7 +40,7 @@ ExifTool and ffprobe are optional for Foundation and scan commands. Check their 
 
 ## Installation
 
-On a new Debian or Ubuntu installation, use the bootstrap script. It detects missing Python support packages, and the explicit option installs them before creating an isolated environment:
+The bootstrap script supports macOS and Debian or Ubuntu. With its explicit system-dependency option it installs Python, ExifTool, and ffmpeg before creating an isolated environment. On macOS this requires Homebrew; on Debian or Ubuntu it uses apt:
 
 ```bash
 git clone https://github.com/adriamuixi/media-library-toolkit.git
@@ -67,7 +67,7 @@ For a core-only setup without development or local-review dependencies:
 ./scripts/bootstrap.sh --runtime
 ```
 
-The bootstrap only invokes `apt-get` when `--install-system-dependencies` is explicitly supplied.
+The bootstrap invokes Homebrew or `apt-get` only when `--install-system-dependencies` is explicitly supplied. Without that option it installs only Python packages into the local virtual environment and reports missing optional metadata tools.
 
 ## Start Here
 
