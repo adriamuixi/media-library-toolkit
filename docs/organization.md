@@ -12,6 +12,8 @@ Organization plan content, items, and checksums are immutable at the SQLite laye
 
 The controlled COPY command requires the exact plan ID as its confirmation value, explicit source and destination roots, a conflict-free DRAFT plan, complete provenance, and exact hashes. It verifies source and copied bytes with SHA-256 and records append-only operation events. COPY never overwrites an existing destination and does not remove source media.
 
+MOVE applies the same preconditions. It copies and verifies the destination first, checks the source hash again, then removes the source and records the removal in the journal.
+
 Organization changes current physical locations but never changes historical provenance. A plan must carry the observation identity and immutable original relative path. Associated Live Photos, RAW and JPEG pairs, and sidecars must be planned together. Destination names must preserve the original filename component.
 
 Active `LIVE_PHOTO_PAIR`, `RAW_JPEG_PAIR`, and `SIDECAR_ASSOCIATION` records form indivisible planning groups. A conflict must be reviewed before planning. Inactive relations remain historical evidence but do not automatically join a new operation plan.

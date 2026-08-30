@@ -38,7 +38,7 @@ Duplicate review exports are limited to CSV and JSON catalog reports. The destin
 
 Before any WRITE operation moves or renames media, it must verify that immutable provenance exists, including the original relative path, source, and import batch. The operation must append a journal record and a current-location transition. It must not replace or delete the only historical reference to an origin.
 
-Controlled COPY is available only for a clean DRAFT plan with explicit confirmation matching its exact plan ID. It requires immutable provenance, validates every source SHA-256 before copy, writes append-only journal events, verifies every destination SHA-256, and refuses every existing destination. The source root and destination root must be explicit, distinct, and non-nested. MOVE remains unavailable until its additional preservation guarantees are implemented.
+Controlled COPY and MOVE are available only for a clean DRAFT plan with explicit confirmation matching its exact plan ID. Both require immutable provenance, validate every source SHA-256 before copy, write append-only journal events, verify every destination SHA-256, and refuse every existing destination. MOVE removes a source only after destination verification and a second source SHA-256 check. The source root and destination root must be explicit, distinct, and non-nested.
 
 ## Planned Local Browser
 

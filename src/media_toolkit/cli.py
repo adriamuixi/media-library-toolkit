@@ -489,6 +489,14 @@ def build_parser() -> argparse.ArgumentParser:
     copy_parser.add_argument("--destination-root", required=True, type=Path)
     copy_parser.add_argument("--confirm-write", required=True)
     copy_parser.set_defaults(handler=_handle_operations_copy)
+    move_parser = operations_commands.add_parser(
+        "move", help="Move one clean plan only after verified copy and explicit confirmation."
+    )
+    move_parser.add_argument("--plan", required=True, dest="plan_id")
+    move_parser.add_argument("--source-root", required=True, type=Path)
+    move_parser.add_argument("--destination-root", required=True, type=Path)
+    move_parser.add_argument("--confirm-write", required=True)
+    move_parser.set_defaults(handler=_handle_operations_move)
     return parser
 
 
@@ -1025,6 +1033,24 @@ def _handle_operations_copy(args: argparse.Namespace, config: AppConfig) -> int:
         args.confirm_write,
     )
     print(f"Controlled COPY completed: {operation_id}")
+    return 0
+
+
+def _handle_operations_move(args: argparse.Namespace, config: AppConfig) -> int:
+    if not config.require_write_confirmation:
+        raise MediaToolkitError("WRITE confirmation is required by project safety policy.")
+    from media_toolkit.operations.write import apply_move_plan
+
+    profile = config.profile(args.profile)
+    operation_id = apply_move_plan(
+        profile.database,
+        profile.environment,
+        args.plan_id,
+        args.source_root,
+        args.destination_root,
+        args.confirm_write,
+    )
+    print(f"Controlled MOVE completed: {operation_id}")
     return 0
 
 

@@ -22,6 +22,7 @@ class _CopyItem:
     """One validated plan item ready to copy."""
 
     plan_item_id: str
+    observation_id: str
     media_id: str
     source_relative_path: str
     destination_relative_path: str
@@ -37,6 +38,35 @@ def apply_copy_plan(
     confirmation: str,
 ) -> str:
     """Copy a clean reviewed plan after exhaustive validation and journaling."""
+    return _apply_plan(
+        database, environment, plan_id, source_root, destination_root, confirmation, "COPY"
+    )
+
+
+def apply_move_plan(
+    database: Path,
+    environment: str,
+    plan_id: str,
+    source_root: Path,
+    destination_root: Path,
+    confirmation: str,
+) -> str:
+    """Move only after verified copy, with a second source hash check before removal."""
+    return _apply_plan(
+        database, environment, plan_id, source_root, destination_root, confirmation, "MOVE"
+    )
+
+
+def _apply_plan(
+    database: Path,
+    environment: str,
+    plan_id: str,
+    source_root: Path,
+    destination_root: Path,
+    confirmation: str,
+    strategy: str,
+) -> str:
+    """Apply one strategy after exhaustive preconditions and append-only journaling."""
     require_database(database, environment)
     if confirmation != plan_id:
         raise CatalogError("WRITE confirmation must exactly match the organization plan ID.")
@@ -55,7 +85,7 @@ def apply_copy_plan(
             raise CatalogError("Only clean DRAFT plans may enter controlled COPY execution.")
         rows = connection.execute(
             """
-            SELECT item.plan_item_id, item.media_id, o.current_relative_path,
+            SELECT item.plan_item_id, item.observation_id, item.media_id, o.current_relative_path,
                    item.destination_relative_path, mi.sha256, item.status
             FROM organization_plan_item AS item
             JOIN file_observation AS o ON o.observation_id = item.observation_id
@@ -71,7 +101,7 @@ def apply_copy_plan(
         raise CatalogError("WRITE refuses plans containing conflicts or blocked items.")
     items = tuple(
         _CopyItem(
-            row["plan_item_id"], row["media_id"], row["current_relative_path"],
+            row["plan_item_id"], row["observation_id"], row["media_id"], row["current_relative_path"],
             row["destination_relative_path"], row["sha256"],
         )
         for row in rows
@@ -94,9 +124,9 @@ def apply_copy_plan(
             """
             INSERT INTO write_operation (
                 operation_id, plan_id, strategy, status, source_root, destination_root, started_at
-            ) VALUES (?, ?, 'COPY', 'RUNNING', ?, ?, ?)
+            ) VALUES (?, ?, ?, 'RUNNING', ?, ?, ?)
             """,
-            (operation_id, plan_id, str(source), str(destination), started_at),
+            (operation_id, plan_id, strategy, str(source), str(destination), started_at),
         )
         _event(connection, operation_id, None, "OPERATION_STARTED", {"plan_id": plan_id})
         connection.execute(
@@ -111,6 +141,31 @@ def apply_copy_plan(
                     connection, operation_id, item.plan_item_id, "ITEM_COPIED",
                     {"destination_relative_path": item.destination_relative_path, "sha256": item.sha256},
                 )
+            if strategy == "MOVE":
+                if _hash_file(source_path) != item.sha256:
+                    raise MediaToolkitError("MOVE source hash changed after destination verification.")
+                source_path.unlink()
+                with open_database(database) as connection:
+                    _event(
+                        connection, operation_id, item.plan_item_id, "ITEM_SOURCE_REMOVED",
+                        {"source_relative_path": item.source_relative_path},
+                    )
+                    connection.execute(
+                        "UPDATE file_observation SET current_relative_path = ? WHERE observation_id = ?",
+                        (item.destination_relative_path, item.observation_id),
+                    )
+                    connection.execute(
+                        """
+                        INSERT INTO observation_location_history (
+                            observation_location_id, observation_id, current_relative_path,
+                            recorded_at, reason
+                        ) VALUES (?, ?, ?, ?, 'FUTURE_OPERATION')
+                        """,
+                        (
+                            str(uuid4()), item.observation_id, item.destination_relative_path,
+                            datetime.now(UTC).isoformat(),
+                        ),
+                    )
         completed_at = datetime.now(UTC).isoformat()
         with open_database(database) as connection:
             _event(connection, operation_id, None, "OPERATION_COMPLETED", {})
