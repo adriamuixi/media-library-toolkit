@@ -755,6 +755,7 @@ def _handle_duplicates_exact(args: argparse.Namespace, config: AppConfig) -> int
         profile.environment,
         args.library,
         args.media_type,
+        config.duplicate_source_type_priority,
     )
     if not groups:
         print("No exact duplicate groups found.")
@@ -762,12 +763,18 @@ def _handle_duplicates_exact(args: argparse.Namespace, config: AppConfig) -> int
     duplicate_count = sum(len(group.members) for group in groups)
     print(f"Exact duplicate groups: {len(groups)}")
     print(f"Exact duplicate files: {duplicate_count}")
-    print("SHA256\tSIZE_BYTES\tSOURCE\tPATH\tTYPE")
+    print("SHA256\tSIZE_BYTES\tSOURCE\tSOURCE_TYPE\tPATH\tTYPE\tPREFERENCE")
     for group in groups:
         for member in group.members:
+            preference = (
+                group.preference_status
+                if member.media_id == group.preferred_media_id
+                else "REVIEW"
+            )
             print(
                 f"{group.sha256}\t{member.size_bytes}\t{member.source_name}\t"
-                f"{member.relative_path}\t{member.media_type}"
+                f"{member.source_type}\t{member.relative_path}\t{member.media_type}\t"
+                f"{preference}"
             )
     return 0
 

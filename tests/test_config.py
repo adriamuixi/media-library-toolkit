@@ -29,6 +29,7 @@ class ConfigTests(unittest.TestCase):
             self.assertFalse(config.date_allow_filesystem_fallback)
             self.assertEqual(config.hash_batch_size, 100)
             self.assertEqual(config.hash_chunk_size_bytes, 8 * 1024 * 1024)
+            self.assertEqual(config.duplicate_source_type_priority, ())
             self.assertFalse(config.scan_include_hidden)
             self.assertEqual(config.scan_batch_size, 500)
 
@@ -102,6 +103,21 @@ class ConfigTests(unittest.TestCase):
 
             with self.assertRaises(ConfigurationError):
                 load_config(config_path, base_directory=base)
+
+    def test_duplicate_source_type_priority_is_normalized_and_unique(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            base = Path(temporary_directory)
+            config_path = base / "duplicates.toml"
+            config_path.write_text(
+                '[duplicates]\nsource_type_priority = ["master-library", "camera"]\n',
+                encoding="utf-8",
+            )
+
+            config = load_config(config_path, base_directory=base)
+
+            self.assertEqual(
+                config.duplicate_source_type_priority, ("MASTER_LIBRARY", "CAMERA")
+            )
 
 
 if __name__ == "__main__":

@@ -39,6 +39,9 @@ allow_filesystem_fallback = false
 batch_size = 100
 chunk_size_bytes = 8388608
 
+[duplicates]
+source_type_priority = []
+
 [scan]
 include_hidden = false
 batch_size = 500

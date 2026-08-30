@@ -45,7 +45,7 @@
 - [x] Size-based candidate generation
 - [x] Streaming SHA-256
 - [x] Exact duplicate groups
-- [ ] Configurable preferred-source ranking
+- [x] Configurable preferred-source ranking
 - [ ] Review reports
 
 ## V1.5 — Immutable Provenance

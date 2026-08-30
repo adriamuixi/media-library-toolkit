@@ -36,6 +36,7 @@ class ExactDuplicateMember:
 
     media_id: str
     source_name: str
+    source_type: str
     relative_path: str
     media_type: str
     size_bytes: int
@@ -47,6 +48,8 @@ class ExactDuplicateGroup:
 
     sha256: str
     members: tuple[ExactDuplicateMember, ...]
+    preferred_media_id: str | None
+    preference_status: str
 
 
 def _selected_types(media_filter: str) -> tuple[str, ...]:
@@ -160,6 +163,7 @@ def list_exact_duplicates(
     environment: str,
     library_name: str,
     media_filter: str,
+    source_type_priority: tuple[str, ...] = (),
 ) -> list[ExactDuplicateGroup]:
     """List present exact-content groups without selecting or changing any copy."""
     require_database(database, environment)
@@ -189,6 +193,7 @@ def list_exact_duplicates(
                 attempt.digest AS sha256,
                 mf.media_id,
                 s.name AS source_name,
+                s.source_type,
                 fl.relative_path,
                 fl.normalized_relative_path,
                 mf.media_type,
@@ -219,18 +224,43 @@ def list_exact_duplicates(
     for row in rows:
         digest = str(row["sha256"])
         if active_digest is not None and digest != active_digest:
-            groups.append(ExactDuplicateGroup(active_digest, tuple(members)))
+            groups.append(_exact_group(active_digest, members, source_type_priority))
             members = []
         active_digest = digest
         members.append(
             ExactDuplicateMember(
                 media_id=row["media_id"],
                 source_name=row["source_name"],
+                source_type=row["source_type"],
                 relative_path=row["relative_path"],
                 media_type=row["media_type"],
                 size_bytes=int(row["size_bytes"]),
             )
         )
     if active_digest is not None:
-        groups.append(ExactDuplicateGroup(active_digest, tuple(members)))
+        groups.append(_exact_group(active_digest, members, source_type_priority))
     return groups
+
+
+def _exact_group(
+    digest: str,
+    members: list[ExactDuplicateMember],
+    source_type_priority: tuple[str, ...],
+) -> ExactDuplicateGroup:
+    immutable_members = tuple(members)
+    if not source_type_priority:
+        return ExactDuplicateGroup(digest, immutable_members, None, "UNCONFIGURED")
+    priorities = {source_type: index for index, source_type in enumerate(source_type_priority)}
+    best_rank = min(
+        priorities.get(member.source_type, len(priorities)) for member in immutable_members
+    )
+    preferred = [
+        member
+        for member in immutable_members
+        if priorities.get(member.source_type, len(priorities)) == best_rank
+    ]
+    if len(preferred) != 1:
+        return ExactDuplicateGroup(digest, immutable_members, None, "TIE")
+    return ExactDuplicateGroup(
+        digest, immutable_members, preferred[0].media_id, "SOURCE_TYPE"
+    )

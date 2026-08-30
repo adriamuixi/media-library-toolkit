@@ -4,7 +4,12 @@ import unittest
 
 from media_toolkit.catalog.database import initialize_database
 from media_toolkit.catalog.repositories import register_library, register_source
-from media_toolkit.duplicates.service import list_exact_duplicates, list_size_candidates
+from media_toolkit.duplicates.service import (
+    ExactDuplicateMember,
+    _exact_group,
+    list_exact_duplicates,
+    list_size_candidates,
+)
 from media_toolkit.hashing.service import HashRequest, run_hashing
 from media_toolkit.scan.service import ScanRequest, run_scan
 
@@ -72,6 +77,20 @@ class DuplicateServiceTests(unittest.TestCase):
                 [member.relative_path for member in groups[0].members],
                 ["first.jpg", "second.jpg"],
             )
+            self.assertEqual(groups[0].preference_status, "UNCONFIGURED")
+
+    def test_unique_best_source_type_is_only_a_recommendation(self) -> None:
+        members = [
+            ExactDuplicateMember("camera", "Camera", "CAMERA", "a.jpg", "PHOTO", 1),
+            ExactDuplicateMember(
+                "master", "Master", "MASTER_LIBRARY", "b.jpg", "PHOTO", 1
+            ),
+        ]
+
+        group = _exact_group("a" * 64, members, ("MASTER_LIBRARY", "CAMERA"))
+
+        self.assertEqual(group.preferred_media_id, "master")
+        self.assertEqual(group.preference_status, "SOURCE_TYPE")
 
 
 if __name__ == "__main__":

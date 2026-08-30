@@ -51,6 +51,8 @@ Same-size candidate generation is a read-only catalog query. It groups only pres
 
 Exact duplicate grouping is also a read-only catalog query. It includes only present files whose current successful SHA-256 values are equal. It neither selects a preferred physical copy nor changes media, inventory, or historical provenance.
 
+The optional duplicate source-type ranking is configuration only. It may recommend one uniquely highest-ranked member for review, but it does not update SQLite identity, select an operation, or authorize cleanup. An unconfigured or tied group has no recommendation.
+
 ## Planned Provenance Tables
 
 The V1 provenance migration will introduce or evolve records for:

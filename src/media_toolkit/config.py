@@ -46,6 +46,7 @@ class AppConfig:
     date_allow_filesystem_fallback: bool
     hash_batch_size: int
     hash_chunk_size_bytes: int
+    duplicate_source_type_priority: tuple[str, ...]
     scan_include_hidden: bool
     scan_batch_size: int
 
@@ -99,6 +100,7 @@ DEFAULTS: dict[str, Any] = {
         "allow_filesystem_fallback": False,
     },
     "hashing": {"batch_size": 100, "chunk_size_bytes": 8 * 1024 * 1024},
+    "duplicates": {"source_type_priority": []},
     "scan": {"include_hidden": False, "batch_size": 500},
 }
 
@@ -142,6 +144,7 @@ def load_config(
     metadata = values["metadata"]
     dates = values["dates"]
     hashing = values["hashing"]
+    duplicates = values["duplicates"]
     scan = values["scan"]
 
     profiles: dict[str, ProfileConfig] = {}
@@ -202,6 +205,19 @@ def load_config(
         raise ConfigurationError("The hashing batch size must be at least 1.")
     if hash_chunk_size_bytes < 1:
         raise ConfigurationError("The hashing chunk size must be at least 1 byte.")
+    raw_priority = duplicates["source_type_priority"]
+    if not isinstance(raw_priority, list):
+        raise ConfigurationError("Duplicate source type priority must be a TOML array.")
+    duplicate_source_type_priority = tuple(
+        str(item).strip().upper().replace("-", "_") for item in raw_priority
+    )
+    if (
+        any(not item for item in duplicate_source_type_priority)
+        or len(set(duplicate_source_type_priority)) != len(duplicate_source_type_priority)
+    ):
+        raise ConfigurationError(
+            "Duplicate source type priority must contain unique non-empty values."
+        )
 
     scan_batch_size = int(scan["batch_size"])
     if scan_batch_size < 1:
@@ -231,6 +247,7 @@ def load_config(
         date_allow_filesystem_fallback=bool(dates["allow_filesystem_fallback"]),
         hash_batch_size=hash_batch_size,
         hash_chunk_size_bytes=hash_chunk_size_bytes,
+        duplicate_source_type_priority=duplicate_source_type_priority,
         scan_include_hidden=bool(scan["include_hidden"]),
         scan_batch_size=scan_batch_size,
     )

@@ -179,6 +179,8 @@ media hashes list \
 
 Hashing is READ ONLY. Successful unchanged file signatures are reused by default; `--force` creates a new immutable hash-attempt record after reading the file again.
 
+Exact duplicate groups may show a non-destructive preferred member when `[duplicates].source_type_priority` defines a unique preferred source type. An empty list, unknown source types, or tied highest-ranked members remain review cases.
+
 The reset command always refuses a production profile and any database whose internal environment marker is not `TEST`.
 
 ## Configuration
