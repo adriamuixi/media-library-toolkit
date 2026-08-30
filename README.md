@@ -12,6 +12,8 @@ Scan and metadata commands inspect files but never modify them.
 
 Historical provenance is treated as immutable catalog data. Before physical organization is implemented, the catalog will retain each original filename, original relative path, source, import batch, source-folder context, current location, and every observed location of exact duplicate content. See [docs/provenance.md](docs/provenance.md).
 
+A later V1 Local Media Browser will provide a loopback-only, read-only visual gallery over the organized library and SQLite catalog. It will include `no_date`, always exclude `toAnalyze`, cache thumbnails outside media roots, and expose original provenance without modifying media. See [docs/browser.md](docs/browser.md).
+
 Catalog environments are physically separated by default:
 
 ```text

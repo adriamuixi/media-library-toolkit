@@ -55,3 +55,6 @@ The project intends to follow Semantic Versioning once stable public releases be
 - Added explicit association confidence and conflict states.
 - Added idempotent relation refresh with inactive history preservation.
 - Added `media associations detect` and filterable `media associations list` commands.
+- Designed a staged V1 Local Media Browser for the organized library.
+- Selected an optional Flask, server-rendered HTML, CSS, and vanilla JavaScript architecture.
+- Defined loopback-only serving, media-ID path resolution, external thumbnail caching, and unconditional `toAnalyze` exclusion.

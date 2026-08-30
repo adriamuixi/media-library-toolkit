@@ -116,6 +116,20 @@ Explicit missing-file reconciliation has not yet been implemented.
 - Every future rename, organization, copy, or move plan must include active companions.
 - Repeated detection may deactivate a relation but must not delete its historical record.
 
+## Local Media Browser
+
+- The organized-library browser is a strictly READ ONLY surface and is separate from audited review workflows.
+- Bind only to `127.0.0.1` by default; do not expose personal media on a LAN or the Internet implicitly.
+- Browser requests identify media by catalog ID, never by a client-supplied filesystem path.
+- Resolve content paths from the explicit organized root and cataloged current relative path, then verify containment and reject symbolic-link traversal.
+- Exclude the `toAnalyze` tree at query, thumbnail, detail, and content-serving boundaries.
+- Include `no_date` as an explicit browseable state.
+- Read catalog metadata instead of extracting metadata during page requests.
+- Grid views use cached thumbnails and never load full originals automatically.
+- Thumbnail and preview caches are reconstructible and must remain outside media roots.
+- Missing or corrupt files produce per-item states and must not break the gallery.
+- Do not add delete, move, rename, metadata-edit, or arbitrary filesystem endpoints to Browser V1.
+
 ## Coding Conventions
 
 - Support Python 3.11 and newer.

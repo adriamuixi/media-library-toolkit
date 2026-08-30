@@ -39,6 +39,21 @@ A logical media item can have multiple file observations. Each observation belon
 
 Reconstructible analysis data, such as hashes, dimensions, codecs, and extracted metadata, is separate from non-reconstructible history, such as original paths, import origin, and manual decisions. Backup policy prioritizes the latter.
 
+## Planned Local Media Browser
+
+The organized-library browser is a separate read-only presentation adapter:
+
+```text
+Browser on 127.0.0.1
+        ├── read-only SQLite queries
+        ├── validated media-ID content resolution
+        └── external reconstructible thumbnail cache
+```
+
+It will use an optional Flask server with server-rendered HTML, CSS, and small vanilla JavaScript modules. Flask is preferred over FastAPI because the browser does not require a public typed API or an ASGI stack; Flask provides routing, templates, conditional file responses, and a smaller conceptual footprint. The Python standard-library HTTP server is not selected because secure routing, range requests, response headers, and error handling would require custom infrastructure.
+
+The browser is not the Local Review workflow. Local Review may append audited decisions to SQLite. The Local Media Browser exposes no mutation routes and opens SQLite in read-only mode. Shared query and thumbnail components may be reused without combining their permission models.
+
 ## Current Scope
 
 The current implementation initializes external working directories, maintains a versioned SQLite catalog, scans media read-only, extracts metadata read-only, resolves effective dates, and detects media associations from cataloged evidence. It does not modify media.

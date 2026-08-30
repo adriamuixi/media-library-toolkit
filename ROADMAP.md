@@ -86,7 +86,35 @@
 - [ ] Post-operation validation
 - [ ] No-overwrite guarantee
 
-## V1.9 — Incremental Imports
+## V1.9 — Local Media Browser
+
+### Browser V0
+
+- [ ] Loopback-only local Flask server
+- [ ] Read-only SQLite query layer
+- [ ] Organized-library scope with unconditional `toAnalyze` exclusion
+- [ ] Paginated photo gallery and year filter
+- [ ] On-demand photo thumbnails cached outside media roots
+- [ ] Basic media detail view and missing-preview states
+- [ ] Media-ID-only safe file serving
+
+### Browser V1
+
+- [ ] Video thumbnails and browser-compatible playback
+- [ ] Month, media-type, source, and extension filters
+- [ ] Text search across filenames and immutable provenance
+- [ ] Complete metadata and provenance detail panels
+- [ ] Stable sorting, pagination, and filtered previous/next navigation
+
+### Browser V1.1
+
+- [ ] Exact-duplicate observation visualization
+- [ ] Dedicated `no_date` browsing
+- [ ] Keyboard navigation
+- [ ] Query and thumbnail performance validation at 100,000+ records
+- [ ] Responsive gallery and optional dark theme
+
+## V1.10 — Incremental Imports
 
 - [ ] `toAnalyze` workflow
 - [ ] Full historical duplicate comparison

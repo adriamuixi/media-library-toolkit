@@ -31,3 +31,9 @@ Future copy and move strategies must use immutable plans, source preconditions, 
 Before any WRITE operation moves or renames media, it must verify that immutable provenance exists, including the original relative path, source, and import batch. The operation must append a journal record and a current-location transition. It must not replace or delete the only historical reference to an origin.
 
 Production WRITE remains out of scope until a consistent SQLite backup command and open-format provenance export have been implemented and tested.
+
+## Planned Local Browser
+
+Local Media Browser is READ ONLY and binds to `127.0.0.1` in V1. It opens SQLite in read-only mode, accepts media IDs rather than paths, validates canonical containment under an explicit organized root, rejects symbolic-link traversal, and never serves `toAnalyze` content. Thumbnails and previews belong to an external reconstructible cache.
+
+The browser must not include media mutation, catalog decision, upload, arbitrary path, directory listing, or remote-bind routes. Missing and changed media produce item-level errors rather than unsafe fallback path resolution.
