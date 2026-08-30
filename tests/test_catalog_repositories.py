@@ -8,6 +8,7 @@ from media_toolkit.catalog.repositories import (
     list_sources,
     register_library,
     register_source,
+    register_import_batch,
 )
 from media_toolkit.errors import CatalogError, DatabaseSafetyError
 
@@ -122,6 +123,26 @@ class CatalogRepositoryTests(unittest.TestCase):
             records = list_libraries(database, "TEST")
 
             self.assertEqual([record.name for record in records], ["alpha", "Zulu"])
+
+
+    def test_import_batch_registration_is_idempotent_and_immutable(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            database = self._database(temporary_directory)
+            register_library(database, "TEST", "Personal Media")
+            register_source(database, "TEST", "Personal Media", "Old Disk", "OLD_DISK")
+            first = register_import_batch(
+                database, "TEST", "Personal Media", "Old Disk", "WD_OLD_2026_08"
+            )
+            second = register_import_batch(
+                database, "TEST", "Personal Media", "Old Disk", "WD_OLD_2026_08"
+            )
+            self.assertTrue(first.created)
+            self.assertFalse(second.created)
+            with self.assertRaises(CatalogError):
+                register_import_batch(
+                    database, "TEST", "Personal Media", "Old Disk",
+                    "WD_OLD_2026_08", "Changed",
+                )
 
 
 if __name__ == "__main__":

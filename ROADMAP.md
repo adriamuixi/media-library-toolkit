@@ -50,7 +50,7 @@
 
 ## V1.5 — Immutable Provenance
 
-- [ ] Import batch registration and identity
+- [x] Import batch registration and identity
 - [ ] Immutable original filename and relative path
 - [ ] Separate logical content from historical file observations
 - [ ] Preserve every exact-duplicate observation and source

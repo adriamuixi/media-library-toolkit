@@ -40,7 +40,21 @@ class SourceRecord:
     updated_at: str
 
 
-RecordType = TypeVar("RecordType", LibraryRecord, SourceRecord)
+@dataclass(frozen=True)
+class ImportBatchRecord:
+    """An immutable bounded incorporation set for one provenance source."""
+
+    import_batch_id: str
+    library_id: str
+    library_name: str
+    source_id: str
+    source_name: str
+    name: str
+    description: str | None
+    created_at: str
+
+
+RecordType = TypeVar("RecordType", LibraryRecord, SourceRecord, ImportBatchRecord)
 
 
 @dataclass(frozen=True)
@@ -311,3 +325,116 @@ def list_sources(
             parameters,
         ).fetchall()
     return [_source_from_row(row) for row in rows]
+
+
+def _batch_from_row(row: sqlite3.Row) -> ImportBatchRecord:
+    return ImportBatchRecord(
+        import_batch_id=row["import_batch_id"],
+        library_id=row["library_id"],
+        library_name=row["library_name"],
+        source_id=row["source_id"],
+        source_name=row["source_name"],
+        name=row["name"],
+        description=row["description"],
+        created_at=row["created_at"],
+    )
+
+
+def register_import_batch(
+    database: Path,
+    environment: str,
+    library_name: str,
+    source_name: str,
+    name: str,
+    description: str | None = None,
+) -> RegistrationResult[ImportBatchRecord]:
+    """Create an immutable import batch or return an identical registration."""
+    require_database(database, environment)
+    clean_library = _clean_required(library_name, "Library name")
+    clean_source = _clean_required(source_name, "Source name")
+    clean_name = _clean_required(name, "Import batch name")
+    clean_description = _clean_optional(description)
+    with open_database(database) as connection:
+        source = connection.execute(
+            """
+            SELECT s.source_id, s.library_id
+            FROM source AS s JOIN library AS l ON l.library_id = s.library_id
+            WHERE l.environment = ? AND l.name = ? COLLATE NOCASE
+              AND s.name = ? COLLATE NOCASE
+            """,
+            (environment.upper(), clean_library, clean_source),
+        ).fetchone()
+        if source is None:
+            raise CatalogError(
+                f"Source '{source_name}' does not exist in library '{library_name}'."
+            )
+        existing = connection.execute(
+            """
+            SELECT b.import_batch_id, b.library_id, l.name AS library_name,
+                   b.source_id, s.name AS source_name, b.name, b.description, b.created_at
+            FROM import_batch AS b
+            JOIN library AS l ON l.library_id = b.library_id
+            JOIN source AS s ON s.source_id = b.source_id
+            WHERE b.library_id = ? AND b.name = ? COLLATE NOCASE
+            """,
+            (source["library_id"], clean_name),
+        ).fetchone()
+        if existing is not None:
+            record = _batch_from_row(existing)
+            if record.source_id != source["source_id"] or record.description != clean_description:
+                raise CatalogError(
+                    f"Import batch '{record.name}' already exists with different settings."
+                )
+            return RegistrationResult(record, False)
+        batch_id = str(uuid4())
+        connection.execute(
+            """
+            INSERT INTO import_batch (
+                import_batch_id, library_id, source_id, name, description, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                batch_id, source["library_id"], source["source_id"], clean_name,
+                clean_description, datetime.now(UTC).isoformat(),
+            ),
+        )
+        row = connection.execute(
+            """
+            SELECT b.import_batch_id, b.library_id, l.name AS library_name,
+                   b.source_id, s.name AS source_name, b.name, b.description, b.created_at
+            FROM import_batch AS b
+            JOIN library AS l ON l.library_id = b.library_id
+            JOIN source AS s ON s.source_id = b.source_id
+            WHERE b.import_batch_id = ?
+            """,
+            (batch_id,),
+        ).fetchone()
+    if row is None:
+        raise CatalogError("Import batch registration could not be read back.")
+    return RegistrationResult(_batch_from_row(row), True)
+
+
+def list_import_batches(
+    database: Path, environment: str, library_name: str | None = None
+) -> list[ImportBatchRecord]:
+    """List immutable import batches in deterministic order."""
+    require_database(database, environment)
+    parameters: list[str] = [environment.upper()]
+    library_filter = ""
+    if library_name is not None:
+        library_filter = " AND l.name = ? COLLATE NOCASE"
+        parameters.append(_clean_required(library_name, "Library name"))
+    with open_database(database) as connection:
+        rows = connection.execute(
+            f"""
+            SELECT b.import_batch_id, b.library_id, l.name AS library_name,
+                   b.source_id, s.name AS source_name, b.name, b.description, b.created_at
+            FROM import_batch AS b
+            JOIN library AS l ON l.library_id = b.library_id
+            JOIN source AS s ON s.source_id = b.source_id
+            WHERE l.environment = ?{library_filter}
+            ORDER BY l.name COLLATE NOCASE, b.created_at, b.import_batch_id
+            """,
+            parameters,
+        ).fetchall()
+    return [_batch_from_row(row) for row in rows]

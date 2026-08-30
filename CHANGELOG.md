@@ -8,6 +8,8 @@ The project intends to follow Semantic Versioning once stable public releases be
 
 ### Added
 
+- Added immutable import-batch registration and listing for bounded source incorporations.
+
 - Foundation repository structure.
 - Installable `media` command.
 - TOML configuration with isolated test and production profiles.

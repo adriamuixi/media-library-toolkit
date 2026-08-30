@@ -21,7 +21,9 @@ from media_toolkit.catalog.database import (
 )
 from media_toolkit.catalog.repositories import (
     list_libraries,
+    list_import_batches,
     list_sources,
+    register_import_batch,
     register_library,
     register_source,
 )
@@ -157,6 +159,22 @@ def build_parser() -> argparse.ArgumentParser:
         "--library", help="Optionally restrict results to one library name."
     )
     source_list_parser.set_defaults(handler=_handle_source_list)
+
+    batch_parser = commands.add_parser(
+        "batch", help="Register or list immutable import batches."
+    )
+    batch_commands = batch_parser.add_subparsers(dest="batch_command", required=True)
+    batch_add_parser = batch_commands.add_parser(
+        "add", help="Register an import batch idempotently."
+    )
+    batch_add_parser.add_argument("--library", required=True)
+    batch_add_parser.add_argument("--source", required=True, dest="source_name")
+    batch_add_parser.add_argument("--name", required=True)
+    batch_add_parser.add_argument("--description")
+    batch_add_parser.set_defaults(handler=_handle_batch_add)
+    batch_list_parser = batch_commands.add_parser("list", help="List import batches.")
+    batch_list_parser.add_argument("--library")
+    batch_list_parser.set_defaults(handler=_handle_batch_list)
 
     scan_parser = commands.add_parser(
         "scan", help="Inventory a registered source root without modifying media."
@@ -509,6 +527,31 @@ def _handle_source_list(args: argparse.Namespace, config: AppConfig) -> int:
     return 0
 
 
+def _handle_batch_add(args: argparse.Namespace, config: AppConfig) -> int:
+    profile = config.profile(args.profile)
+    result = register_import_batch(
+        profile.database, profile.environment, args.library, args.source_name,
+        args.name, args.description,
+    )
+    print(f"Import batch: {result.record.name}")
+    print(f"Import batch ID: {result.record.import_batch_id}")
+    print(f"Source: {result.record.source_name}")
+    print(f"Registration: {'CREATED' if result.created else 'EXISTING'}")
+    return 0
+
+
+def _handle_batch_list(args: argparse.Namespace, config: AppConfig) -> int:
+    profile = config.profile(args.profile)
+    rows = list_import_batches(profile.database, profile.environment, args.library)
+    if not rows:
+        print("No import batches found.")
+        return 0
+    print("NAME\tSOURCE\tCREATED_AT\tDESCRIPTION")
+    for row in rows:
+        print(f"{row.name}\t{row.source_name}\t{row.created_at}\t{row.description or ''}")
+    return 0
+
+
 def _generated_paths(config: AppConfig, profile_name: str | None) -> tuple[Path, ...]:
     profile = config.profile(profile_name)
     return (
@@ -828,6 +871,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             command_name = f"library-{args.library_command}"
         elif getattr(args, "source_command", None):
             command_name = f"source-{args.source_command}"
+        elif getattr(args, "batch_command", None):
+            command_name = f"batch-{args.batch_command}"
         elif getattr(args, "tools_command", None):
             command_name = f"tools-{args.tools_command}"
         elif getattr(args, "dates_command", None):
