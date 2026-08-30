@@ -77,6 +77,18 @@ class HashingServiceTests(unittest.TestCase):
             self.assertEqual(before, after)
             self.assertEqual(len(rows), 3)
             self.assertEqual(rows[1].digest, rows[2].digest)
+            with open_database(database) as connection:
+                item_count = connection.execute(
+                    "SELECT COUNT(*) AS count FROM media_item"
+                ).fetchone()["count"]
+                linked_count = connection.execute(
+                    """
+                    SELECT COUNT(*) AS count FROM file_observation
+                    WHERE media_item_id IS NOT NULL
+                    """
+                ).fetchone()["count"]
+            self.assertEqual(item_count, 2)
+            self.assertEqual(linked_count, 3)
 
     def test_unchanged_hashes_are_cached_and_force_preserves_history(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:

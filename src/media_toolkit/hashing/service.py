@@ -180,6 +180,23 @@ def _record_success(
         """,
         (row["media_id"], hash_id, timestamp),
     )
+    media_item_id = f"sha256-{digest}"
+    connection.execute(
+        """
+        INSERT INTO media_item (media_item_id, sha256, created_at)
+        VALUES (?, ?, ?)
+        ON CONFLICT(sha256) DO NOTHING
+        """,
+        (media_item_id, digest, timestamp),
+    )
+    connection.execute(
+        """
+        UPDATE file_observation
+        SET media_item_id = ?
+        WHERE media_id = ? AND media_item_id IS NULL
+        """,
+        (media_item_id, row["media_id"]),
+    )
 
 
 def run_hashing(request: HashRequest) -> HashSummary:

@@ -52,7 +52,7 @@
 
 - [x] Import batch registration and identity
 - [ ] Immutable original filename and relative path
-- [ ] Separate logical content from historical file observations
+- [x] Separate logical content from historical file observations
 - [ ] Preserve every exact-duplicate observation and source
 - [ ] Raw and normalized source context fields
 - [ ] Current location tracking without overwriting original location
