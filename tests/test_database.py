@@ -1,0 +1,102 @@
+from pathlib import Path
+import sqlite3
+import tempfile
+import unittest
+
+from media_toolkit.catalog.database import (
+    get_database_status,
+    initialize_database,
+    reset_test_database,
+)
+from media_toolkit.errors import DatabaseSafetyError
+
+
+class DatabaseTests(unittest.TestCase):
+    def test_initialize_creates_marked_test_catalog(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            path = Path(temporary_directory) / "catalog.sqlite3"
+
+            status = initialize_database(path, "test", "TEST")
+
+            self.assertTrue(status.exists)
+            self.assertEqual(status.environment, "TEST")
+            self.assertEqual(status.profile_name, "test")
+            self.assertEqual(status.schema_version, 1)
+            self.assertTrue(status.database_id)
+
+    def test_reinitialization_is_idempotent(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            path = Path(temporary_directory) / "catalog.sqlite3"
+
+            first = initialize_database(path, "test", "TEST")
+            second = initialize_database(path, "test", "TEST")
+
+            self.assertEqual(first.database_id, second.database_id)
+            self.assertEqual(second.schema_version, 1)
+
+    def test_reset_recreates_test_catalog_with_new_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            path = Path(temporary_directory) / "catalog.sqlite3"
+            first = initialize_database(path, "test", "TEST")
+            with sqlite3.connect(path) as connection:
+                connection.execute(
+                    """
+                    INSERT INTO library (
+                        library_id, name, environment, created_at, updated_at
+                    ) VALUES ('temporary', 'Temporary', 'TEST', 'now', 'now')
+                    """
+                )
+
+            second = reset_test_database(path, "test", "TEST")
+
+            self.assertNotEqual(first.database_id, second.database_id)
+            with sqlite3.connect(path) as connection:
+                count = connection.execute("SELECT COUNT(*) FROM library").fetchone()[0]
+            self.assertEqual(count, 0)
+
+    def test_reset_refuses_production_profile(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            path = Path(temporary_directory) / "catalog.sqlite3"
+            initialize_database(path, "production", "PRODUCTION")
+
+            with self.assertRaises(DatabaseSafetyError):
+                reset_test_database(path, "production", "PRODUCTION")
+
+    def test_reset_refuses_production_database_with_test_profile(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            path = Path(temporary_directory) / "catalog.sqlite3"
+            initialize_database(path, "production", "PRODUCTION")
+
+            with self.assertRaises(DatabaseSafetyError):
+                reset_test_database(path, "test", "TEST")
+
+    def test_status_does_not_create_missing_database(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            path = Path(temporary_directory) / "missing.sqlite3"
+
+            status = get_database_status(path)
+
+            self.assertFalse(status.exists)
+            self.assertFalse(path.exists())
+
+    def test_initialize_refuses_to_adopt_unmarked_sqlite_database(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            path = Path(temporary_directory) / "unrelated.sqlite3"
+            with sqlite3.connect(path) as connection:
+                connection.execute("CREATE TABLE unrelated (value TEXT)")
+
+            with self.assertRaises(DatabaseSafetyError):
+                initialize_database(path, "test", "TEST")
+
+            with sqlite3.connect(path) as connection:
+                tables = {
+                    row[0]
+                    for row in connection.execute(
+                        "SELECT name FROM sqlite_master WHERE type = 'table'"
+                    )
+                }
+            self.assertEqual(tables, {"unrelated"})
+
+
+if __name__ == "__main__":
+    unittest.main()

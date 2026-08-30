@@ -1,0 +1,42 @@
+# Configuration
+
+Configuration uses TOML because Python 3.11 can read it without a third-party dependency and because its values and sections are explicit.
+
+Built-in safe defaults match `config/default.toml`. A local file may override any section:
+
+```bash
+media --config config/local.toml --profile test init
+```
+
+Relative configured paths are resolved from the process working directory. Use absolute paths in personal configuration when commands may be launched from different directories.
+
+`config/local.toml` is ignored by Git.
+
+## Profiles
+
+Profiles isolate runtime catalogs:
+
+```toml
+[profiles.production]
+database = "./data/production/catalog.sqlite3"
+environment = "PRODUCTION"
+
+[profiles.test]
+database = "./data/test/catalog.sqlite3"
+environment = "TEST"
+```
+
+The default profile is production so that ordinary commands never silently operate on test data. During development, always select test explicitly with `--profile test`.
+
+The default media mode is required to remain `read-only`.
+
+## Metadata Rules
+
+The panorama fallback threshold is configurable:
+
+```toml
+[metadata]
+panorama_aspect_ratio_threshold = 2.0
+```
+
+It represents the longer normalized display dimension divided by the shorter dimension and must be greater than 1.0. Authoritative panorama metadata takes precedence over this geometric fallback.

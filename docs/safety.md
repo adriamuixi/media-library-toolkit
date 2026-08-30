@@ -1,0 +1,29 @@
+# Safety
+
+## Primary Invariant
+
+Original media must not be changed without an explicitly selected WRITE operation.
+
+## Modes
+
+READ ONLY may read original media and write only to external catalogs, logs, reports, and caches. DRY RUN creates operation plans. WRITE applies a previously reviewed plan after explicit confirmation and validation.
+
+No WRITE behavior may be enabled implicitly.
+
+## Catalog Reset
+
+Catalog reset is separate from media WRITE. It deletes catalog knowledge, not media, but is still destructive and guarded.
+
+The reset operation requires all of the following:
+
+1. The selected configuration profile has environment `TEST`.
+2. An existing catalog has an internal `TEST` environment marker.
+3. The user passes `--confirm-reset`.
+
+The CLI refuses production resets. After a successful reset it immediately creates a new empty catalog with a new database ID and the latest schema.
+
+Test and production catalogs use different files by default. This is safer than mixing test and production rows in one database. The environment is also recorded on the catalog and each library, providing a second visible boundary.
+
+## Future Media Writes
+
+Future copy and move strategies must use immutable plans, source preconditions, destination conflict checks, operation journaling, and post-copy SHA-256 verification. Destination overwrite is prohibited.

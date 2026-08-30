@@ -1,0 +1,29 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# Local application state and private configuration
+data/
+logs/
+reports/
+cache/
+*.sqlite
+*.sqlite3
+*.db
+.env
+config/local.toml
+
+# Generated media analysis artifacts
+thumbnails/
+temporary-frames/
+fingerprints/
+
+# Editors and operating systems
+.DS_Store
+.idea/
+.vscode/

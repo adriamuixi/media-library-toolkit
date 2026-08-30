@@ -1,0 +1,24 @@
+[application]
+default_profile = "production"
+log_level = "INFO"
+
+[paths]
+workspace = "./data"
+logs = "./logs"
+reports = "./reports"
+cache = "./cache"
+
+[profiles.production]
+database = "./data/production/catalog.sqlite3"
+environment = "PRODUCTION"
+
+[profiles.test]
+database = "./data/test/catalog.sqlite3"
+environment = "TEST"
+
+[safety]
+default_media_mode = "read-only"
+require_write_confirmation = true
+
+[metadata]
+panorama_aspect_ratio_threshold = 2.0
