@@ -86,6 +86,10 @@ Migrations are ordered SQL files in `src/media_toolkit/catalog/migrations/`. App
 
 SQLite foreign keys, WAL journaling, and full synchronous writes are enabled for writable catalog connections.
 
+## Database Browser Views
+
+The media_with_provenance view combines the current reviewable location, immutable origin, source, import batch, logical hash, date state, and file classification. The duplicate_summary view exposes exact logical items observed at multiple historical paths. They are inspection views for Local Database Browser and reporting; the normalized tables remain authoritative.
+
 ## Test Reset
 
 Use:

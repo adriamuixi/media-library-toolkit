@@ -22,6 +22,9 @@ review = [
   "Flask>=3,<4",
   "Pillow>=10,<12",
 ]
+database = [
+  "Datasette>=1.0a5,<2",
+]
 
 [project.scripts]
 media = "media_toolkit.cli:main"

@@ -8,6 +8,8 @@ The project intends to follow Semantic Versioning once stable public releases be
 
 ### Added
 
+- Added a loopback-only immutable Datasette Database Browser with versioned inspection queries and focused SQLite views.
+
 - Added an explicitly confirmed controlled COPY operation with provenance checks, SHA-256 verification, append-only journaling, and no-overwrite protection.
 
 - Added SQLite-enforced immutable organization plan content and items with checksum protection.

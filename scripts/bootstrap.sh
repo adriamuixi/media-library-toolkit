@@ -2,7 +2,7 @@
 set -euo pipefail
 
 install_system_dependencies=false
-extras="dev,review"
+extras="dev,review,database"
 
 for argument in "$@"; do
     case "$argument" in

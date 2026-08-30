@@ -12,17 +12,17 @@ The initial implementation will use Datasette rather than a custom SQL browser. 
 
 ## Safety Boundary
 
-The browser will bind only to the loopback address by default and open the configured SQLite catalog in read-only mode. It will not expose edit controls, arbitrary write SQL, remote binding, or network access.
+The browser binds only to the loopback address and opens the configured SQLite catalog using Datasette immutable mode. It does not expose edit controls, remote binding, or network access.
 
 Catalog changes remain the responsibility of migrations, CLI commands, and controlled processing services. The browser is an inspection and debugging surface, not an administration console.
 
-## Planned Command
+## Command
 
-The database browse command will use the selected profile's configured catalog and accept an explicit port. An explicit database path may be considered later only when it can be validated against the selected profile and the same read-only safeguards.
+Use the db browse command with an explicit port. It uses the selected profile's configured catalog and generates Datasette query metadata only under the external cache directory. An explicit database path is intentionally not supported.
 
 ## Saved Queries
 
-Versioned, schema-aware inspection queries will live in the queries directory. The initial set will cover:
+Versioned, schema-aware inspection queries live in the queries directory and are loaded as Datasette canned queries. The initial set covers:
 
 - photographs and videos by effective year;
 - exact duplicate groups;
@@ -35,4 +35,4 @@ Queries contain SQL only and never personal database contents.
 
 ## Focused Views
 
-The implementation may add a minimal number of SQLite views when they materially simplify recurring inspection. Candidate views are media with provenance and duplicate summary. Views must evolve with migrations and must not duplicate or replace the normalized catalog tables.
+The catalog exposes two focused SQLite views: media with provenance and duplicate summary. Views evolve with migrations and do not duplicate or replace the normalized catalog tables.

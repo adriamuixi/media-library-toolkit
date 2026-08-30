@@ -88,12 +88,12 @@
 
 ## V1.8.5 — Local Database Browser
 
-- [ ] Optional Datasette installation extra
-- [ ] Loopback-only read-only database browse command
-- [ ] Configured catalog selection and explicit port
-- [ ] Versioned saved inspection queries
-- [ ] Focused SQLite views for provenance and duplicate summaries
-- [ ] Schema version, table-count, and migration inspection
+- [x] Optional Datasette installation extra
+- [x] Loopback-only read-only database browse command
+- [x] Configured catalog selection and explicit port
+- [x] Versioned saved inspection queries
+- [x] Focused SQLite views for provenance and duplicate summaries
+- [x] Schema version, table-count, and migration inspection
 
 ## V1.9 — Local Media Browser
 

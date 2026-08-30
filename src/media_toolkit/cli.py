@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import logging
 from pathlib import Path
+import subprocess
 import sys
 from typing import Sequence
 
@@ -34,6 +36,7 @@ from media_toolkit.dates.service import (
     list_date_resolutions,
     run_date_resolution,
 )
+from media_toolkit.database_browser import build_datasette_metadata
 from media_toolkit.duplicates.service import (
     export_exact_duplicate_report,
     list_exact_duplicates,
@@ -114,6 +117,11 @@ def build_parser() -> argparse.ArgumentParser:
     backup_parser = db_commands.add_parser("backup", help="Create a consistent catalog backup.")
     backup_parser.add_argument("--output", required=True, type=Path)
     backup_parser.set_defaults(handler=_handle_db_backup)
+    database_browse_parser = db_commands.add_parser(
+        "browse", help="Open the configured catalog through loopback-only Datasette."
+    )
+    database_browse_parser.add_argument("--port", type=int, default=8081)
+    database_browse_parser.set_defaults(handler=_handle_db_browse)
 
     library_parser = commands.add_parser(
         "library", help="Register or list logical media libraries."
@@ -549,6 +557,35 @@ def _handle_db_backup(args: argparse.Namespace, config: AppConfig) -> int:
     profile = config.profile(args.profile)
     output = backup_database(profile.database, profile.environment, args.output)
     print(f"Catalog backup: {output}")
+    return 0
+
+
+def _handle_db_browse(args: argparse.Namespace, config: AppConfig) -> int:
+    if not 1 <= args.port <= 65535:
+        raise MediaToolkitError("Database Browser port must be between 1 and 65535.")
+    profile = config.profile(args.profile)
+    if not profile.database.is_file():
+        raise MediaToolkitError(
+            f"Catalog is not initialized: {profile.database}. Run 'media init' first."
+        )
+    if importlib.util.find_spec("datasette") is None:
+        raise MediaToolkitError(
+            "Database Browser requires the optional database dependency. "
+            "Run: .venv/bin/python -m pip install -e '.[database]'."
+        )
+    metadata = build_datasette_metadata(config.cache, profile.database)
+    command = [
+        sys.executable, "-m", "datasette", "serve",
+        "--immutable", str(profile.database),
+        "--metadata", str(metadata),
+        "--host", "127.0.0.1",
+        "--port", str(args.port),
+    ]
+    print(f"Database Browser running at: http://127.0.0.1:{args.port}")
+    try:
+        subprocess.run(command, check=True)
+    except subprocess.CalledProcessError as exc:
+        raise MediaToolkitError(f"Database Browser stopped with exit code {exc.returncode}.") from exc
     return 0
 
 
