@@ -4,7 +4,8 @@ import unittest
 
 from media_toolkit.catalog.database import initialize_database
 from media_toolkit.catalog.repositories import register_library, register_source
-from media_toolkit.duplicates.service import list_size_candidates
+from media_toolkit.duplicates.service import list_exact_duplicates, list_size_candidates
+from media_toolkit.hashing.service import HashRequest, run_hashing
 from media_toolkit.scan.service import ScanRequest, run_scan
 
 
@@ -14,8 +15,9 @@ class DuplicateServiceTests(unittest.TestCase):
         state = base / "state"
         root.mkdir()
         state.mkdir()
-        (root / "first.jpg").write_bytes(b"same-size-a")
-        (root / "second.jpg").write_bytes(b"same-size-b")
+        (root / "first.jpg").write_bytes(b"exact-content")
+        (root / "second.jpg").write_bytes(b"exact-content")
+        (root / "different.jpg").write_bytes(b"same-size-but-different")
         (root / "clip.mov").write_bytes(b"video")
         database = state / "catalog.sqlite3"
         initialize_database(database, "test", "TEST")
@@ -28,16 +30,16 @@ class DuplicateServiceTests(unittest.TestCase):
                 False, 10, generated,
             )
         )
-        return database
+        return root, database, generated
 
     def test_same_size_files_are_candidates_without_duplicate_verdict(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
-            database = self._setup(Path(temporary_directory))
+            _, database, _ = self._setup(Path(temporary_directory))
 
             groups = list_size_candidates(database, "TEST", "Personal Media", "all")
 
             self.assertEqual(len(groups), 1)
-            self.assertEqual(groups[0].size_bytes, len(b"same-size-a"))
+            self.assertEqual(groups[0].size_bytes, len(b"exact-content"))
             self.assertEqual(
                 [member.relative_path for member in groups[0].members],
                 ["first.jpg", "second.jpg"],
@@ -46,11 +48,30 @@ class DuplicateServiceTests(unittest.TestCase):
 
     def test_media_type_filter_excludes_photo_candidates(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
-            database = self._setup(Path(temporary_directory))
+            _, database, _ = self._setup(Path(temporary_directory))
 
             groups = list_size_candidates(database, "TEST", "Personal Media", "videos")
 
             self.assertEqual(groups, [])
+
+    def test_equal_sha256_values_create_exact_groups(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root, database, generated = self._setup(Path(temporary_directory))
+            run_hashing(
+                HashRequest(
+                    database, "TEST", "Personal Media", "Synthetic", root, "all",
+                    10, 1024, generated,
+                )
+            )
+
+            groups = list_exact_duplicates(database, "TEST", "Personal Media", "all")
+
+            self.assertEqual(len(groups), 1)
+            self.assertEqual(len(groups[0].sha256), 64)
+            self.assertEqual(
+                [member.relative_path for member in groups[0].members],
+                ["first.jpg", "second.jpg"],
+            )
 
 
 if __name__ == "__main__":

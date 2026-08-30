@@ -31,7 +31,7 @@ from media_toolkit.dates.service import (
     list_date_resolutions,
     run_date_resolution,
 )
-from media_toolkit.duplicates.service import list_size_candidates
+from media_toolkit.duplicates.service import list_exact_duplicates, list_size_candidates
 from media_toolkit.errors import MediaToolkitError
 from media_toolkit.hashing.service import HashRequest, list_hashes, run_hashing
 from media_toolkit.logging_config import configure_logging
@@ -361,6 +361,20 @@ def build_parser() -> argparse.ArgumentParser:
         help="Restrict candidates to photos, videos, or all inventoried files.",
     )
     duplicates_candidates_parser.set_defaults(handler=_handle_duplicates_candidates)
+    duplicates_exact_parser = duplicates_commands.add_parser(
+        "exact",
+        help="List groups with equal SHA-256 values without changing any file.",
+    )
+    duplicates_exact_parser.add_argument(
+        "--library", required=True, help="Name of the existing logical library."
+    )
+    duplicates_exact_parser.add_argument(
+        "--media-type",
+        choices=("photos", "videos", "all"),
+        default="all",
+        help="Restrict groups to photos, videos, or all inventoried files.",
+    )
+    duplicates_exact_parser.set_defaults(handler=_handle_duplicates_exact)
     return parser
 
 
@@ -730,6 +744,30 @@ def _handle_duplicates_candidates(args: argparse.Namespace, config: AppConfig) -
             print(
                 f"{group.size_bytes}\t{member.source_name}\t{member.relative_path}\t"
                 f"{member.media_type}\t{digest}"
+            )
+    return 0
+
+
+def _handle_duplicates_exact(args: argparse.Namespace, config: AppConfig) -> int:
+    profile = config.profile(args.profile)
+    groups = list_exact_duplicates(
+        profile.database,
+        profile.environment,
+        args.library,
+        args.media_type,
+    )
+    if not groups:
+        print("No exact duplicate groups found.")
+        return 0
+    duplicate_count = sum(len(group.members) for group in groups)
+    print(f"Exact duplicate groups: {len(groups)}")
+    print(f"Exact duplicate files: {duplicate_count}")
+    print("SHA256\tSIZE_BYTES\tSOURCE\tPATH\tTYPE")
+    for group in groups:
+        for member in group.members:
+            print(
+                f"{group.sha256}\t{member.size_bytes}\t{member.source_name}\t"
+                f"{member.relative_path}\t{member.media_type}"
             )
     return 0
 

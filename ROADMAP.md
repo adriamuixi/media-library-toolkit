@@ -44,7 +44,7 @@
 
 - [x] Size-based candidate generation
 - [x] Streaming SHA-256
-- [ ] Exact duplicate groups
+- [x] Exact duplicate groups
 - [ ] Configurable preferred-source ranking
 - [ ] Review reports
 

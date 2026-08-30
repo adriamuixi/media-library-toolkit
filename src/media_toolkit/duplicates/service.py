@@ -30,6 +30,25 @@ class SizeCandidateGroup:
     members: tuple[SizeCandidateMember, ...]
 
 
+@dataclass(frozen=True)
+class ExactDuplicateMember:
+    """One present cataloged file in an exact SHA-256 content group."""
+
+    media_id: str
+    source_name: str
+    relative_path: str
+    media_type: str
+    size_bytes: int
+
+
+@dataclass(frozen=True)
+class ExactDuplicateGroup:
+    """A group of present files with the same current SHA-256 digest."""
+
+    sha256: str
+    members: tuple[ExactDuplicateMember, ...]
+
+
 def _selected_types(media_filter: str) -> tuple[str, ...]:
     if media_filter == "photos":
         return ("PHOTO",)
@@ -133,4 +152,85 @@ def list_size_candidates(
         )
     if active_size is not None:
         groups.append(SizeCandidateGroup(active_size, tuple(members)))
+    return groups
+
+
+def list_exact_duplicates(
+    database: Path,
+    environment: str,
+    library_name: str,
+    media_filter: str,
+) -> list[ExactDuplicateGroup]:
+    """List present exact-content groups without selecting or changing any copy."""
+    require_database(database, environment)
+    media_types = _selected_types(media_filter)
+    placeholders = ", ".join("?" for _ in media_types)
+    with open_database(database) as connection:
+        library_id = _library_id(connection, environment, library_name)
+        rows = connection.execute(
+            f"""
+            WITH exact_digests AS (
+                SELECT attempt.digest
+                FROM media_hash AS current
+                JOIN hash_attempt AS attempt ON attempt.hash_id = current.hash_id
+                JOIN media_file AS mf ON mf.media_id = current.media_id
+                JOIN file_location AS fl ON fl.media_id = mf.media_id
+                JOIN source AS s ON s.source_id = fl.source_id
+                WHERE s.library_id = ?
+                  AND fl.present = 1
+                  AND mf.status = 'PRESENT'
+                  AND mf.media_type IN ({placeholders})
+                  AND attempt.algorithm = 'SHA256'
+                  AND attempt.status = 'SUCCESS'
+                GROUP BY attempt.digest
+                HAVING COUNT(*) > 1
+            )
+            SELECT
+                attempt.digest AS sha256,
+                mf.media_id,
+                s.name AS source_name,
+                fl.relative_path,
+                fl.normalized_relative_path,
+                mf.media_type,
+                fl.size_bytes
+            FROM media_hash AS current
+            JOIN hash_attempt AS attempt ON attempt.hash_id = current.hash_id
+            JOIN media_file AS mf ON mf.media_id = current.media_id
+            JOIN file_location AS fl ON fl.media_id = mf.media_id
+            JOIN source AS s ON s.source_id = fl.source_id
+            JOIN exact_digests AS exact ON exact.digest = attempt.digest
+            WHERE s.library_id = ?
+              AND fl.present = 1
+              AND mf.status = 'PRESENT'
+              AND mf.media_type IN ({placeholders})
+            ORDER BY
+                attempt.digest,
+                s.name COLLATE NOCASE,
+                fl.normalized_relative_path,
+                fl.relative_path,
+                mf.media_id
+            """,
+            (library_id, *media_types, library_id, *media_types),
+        ).fetchall()
+
+    groups: list[ExactDuplicateGroup] = []
+    members: list[ExactDuplicateMember] = []
+    active_digest: str | None = None
+    for row in rows:
+        digest = str(row["sha256"])
+        if active_digest is not None and digest != active_digest:
+            groups.append(ExactDuplicateGroup(active_digest, tuple(members)))
+            members = []
+        active_digest = digest
+        members.append(
+            ExactDuplicateMember(
+                media_id=row["media_id"],
+                source_name=row["source_name"],
+                relative_path=row["relative_path"],
+                media_type=row["media_type"],
+                size_bytes=int(row["size_bytes"]),
+            )
+        )
+    if active_digest is not None:
+        groups.append(ExactDuplicateGroup(active_digest, tuple(members)))
     return groups

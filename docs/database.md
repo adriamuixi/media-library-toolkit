@@ -49,6 +49,8 @@ The current hash does not yet create a logical `media_item` or collapse inventor
 
 Same-size candidate generation is a read-only catalog query. It groups only present files in one library that share a byte size and is intentionally non-authoritative: equal size is a performance filter, not duplicate evidence. SHA-256 equality is required before later duplicate grouping can call content exact.
 
+Exact duplicate grouping is also a read-only catalog query. It includes only present files whose current successful SHA-256 values are equal. It neither selects a preferred physical copy nor changes media, inventory, or historical provenance.
+
 ## Planned Provenance Tables
 
 The V1 provenance migration will introduce or evolve records for:
