@@ -12,7 +12,7 @@ The initial implementation will use Datasette rather than a custom SQL browser. 
 
 ## Safety Boundary
 
-The browser binds only to the loopback address and opens the configured SQLite catalog using Datasette immutable mode. It does not expose edit controls, remote binding, or network access.
+The browser binds only to the loopback address and opens the configured SQLite catalog through Datasette's ordinary monitored connection mode. Datasette does not expose catalog edit controls, and ordinary mode lets SQLite notice safe external updates made by toolkit commands. Immutable mode is intentionally not used because the catalog can change while the local interfaces are running.
 
 Catalog changes remain the responsibility of migrations, CLI commands, and controlled processing services. The browser is an inspection and debugging surface, not an administration console.
 

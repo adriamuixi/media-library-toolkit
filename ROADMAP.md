@@ -111,16 +111,21 @@
 
 - [x] Video thumbnails and browser-compatible playback
 - [x] Month, media-type, source, and extension filters
+- [x] Geometry, panorama, orientation, and source-provenance-type filters
+- [x] Explainable WhatsApp filename and path evidence filter
+- [x] Accessible WhatsApp evidence badge on gallery thumbnails
 - [x] Text search across filenames and immutable provenance
 - [x] Complete metadata and provenance detail panels
 - [x] Complete per-media catalog evidence and history panels
 - [x] Stable sorting, pagination, and filtered previous/next navigation
+- [x] Compact high-density grid with 100, 200, and 500 item page sizes
 
 ### Browser V1.1
 
 - [x] Exact-duplicate observation visualization
 - [x] Dedicated `no_date` browsing
 - [x] Keyboard navigation
+- [x] Overlay slider arrows on individual media previews
 - [x] Query and thumbnail performance validation at 100,000+ records
 - [x] Responsive gallery and optional dark theme
 

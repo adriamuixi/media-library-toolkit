@@ -24,7 +24,9 @@ class BrowserWebTests(unittest.TestCase):
             (root / "2024").mkdir(parents=True)
             (root / "toAnalyze").mkdir()
             state.mkdir()
-            Image.new("RGB", (1200, 800), color="navy").save(root / "2024" / "IMG.jpg")
+            whatsapp_name = "IMG-20240101-WA0001.jpg"
+            Image.new("RGB", (1200, 800), color="navy").save(root / "2024" / whatsapp_name)
+            Image.new("RGB", (1000, 700), color="green").save(root / "2024" / "second.jpg")
             Image.new("RGB", (800, 1200), color="red").save(root / "toAnalyze" / "private.jpg")
             database = state / "catalog.sqlite3"
             initialize_database(database, "test", "TEST")
@@ -38,10 +40,14 @@ class BrowserWebTests(unittest.TestCase):
             )
             with open_database(database) as connection:
                 visible_id = connection.execute(
-                    "SELECT media_id FROM media_file WHERE original_filename = 'IMG.jpg'"
+                    "SELECT media_id FROM media_file WHERE original_filename = ?",
+                    (whatsapp_name,),
                 ).fetchone()["media_id"]
                 hidden_id = connection.execute(
                     "SELECT media_id FROM media_file WHERE original_filename = 'private.jpg'"
+                ).fetchone()["media_id"]
+                second_id = connection.execute(
+                    "SELECT media_id FROM media_file WHERE original_filename = 'second.jpg'"
                 ).fetchone()["media_id"]
             application = create_browser_app(
                 database, "TEST", "Personal Media", root, state / "cache"
@@ -49,16 +55,42 @@ class BrowserWebTests(unittest.TestCase):
             client = application.test_client()
 
             gallery = client.get("/")
+            gallery_200 = client.get("/?page_size=200")
+            invalid_page_size = client.get("/?page_size=60")
             detail = client.get(f"/media/{visible_id}")
+            second_detail = client.get(f"/media/{second_id}")
             thumbnail = client.get(f"/media/{visible_id}/thumbnail")
             content = client.get(f"/media/{visible_id}/content")
             excluded_detail = client.get(f"/media/{hidden_id}")
 
             self.assertEqual(gallery.status_code, 200)
-            self.assertIn(b"2024/IMG.jpg", gallery.data)
+            self.assertEqual(gallery_200.status_code, 200)
+            self.assertIn(b"Up to 200 entries per page", gallery_200.data)
+            self.assertEqual(invalid_page_size.status_code, 400)
+            self.assertIn(b'name="page_size"', gallery.data)
+            self.assertIn(b"100 per page", gallery.data)
+            self.assertIn(b"200 per page", gallery.data)
+            self.assertIn(b"500 per page", gallery.data)
+            self.assertIn(f"2024/{whatsapp_name}".encode(), gallery.data)
+            self.assertIn(b'class="whatsapp-origin-icon"', gallery.data)
+            self.assertIn(b'aria-label="WhatsApp evidence"', gallery.data)
             self.assertNotIn(b"toAnalyze/private.jpg", gallery.data)
             self.assertIn(b"http://127.0.0.1:8082", gallery.data)
+            self.assertIn(b'name="min_width"', gallery.data)
+            self.assertIn(b'name="max_height"', gallery.data)
+            self.assertIn(b'name="min_aspect"', gallery.data)
+            self.assertIn(b'name="panorama"', gallery.data)
+            self.assertIn(b'name="orientation"', gallery.data)
+            self.assertIn(b'name="source_type"', gallery.data)
+            self.assertIn(b'name="whatsapp"', gallery.data)
             self.assertEqual(detail.status_code, 200)
+            self.assertIn(b'class="whatsapp-detail-icon"', detail.data)
+            self.assertIn(b'id="preview-next-link"', detail.data)
+            self.assertIn(b'aria-label="Next media"', detail.data)
+            self.assertIn(b'id="preview-previous-link"', second_detail.data)
+            self.assertIn(b'aria-label="Previous media"', second_detail.data)
+            self.assertIn(b"ArrowLeft", detail.data)
+            self.assertIn(b"ArrowRight", detail.data)
             self.assertIn(b"Complete catalog information", detail.data)
             self.assertIn(b"Media identity", detail.data)
             self.assertIn(b"Current file locations", detail.data)
@@ -72,7 +104,14 @@ class BrowserWebTests(unittest.TestCase):
             self.assertEqual(content.status_code, 200)
             self.assertEqual(excluded_detail.status_code, 404)
             self.assertTrue(any((state / "cache" / "media-browser-thumbnails").rglob("*.jpg")))
-            self.assertEqual(sorted(root.rglob("*.jpg")), [root / "2024" / "IMG.jpg", root / "toAnalyze" / "private.jpg"])
+            self.assertEqual(
+                sorted(root.rglob("*.jpg")),
+                [
+                    root / "2024" / whatsapp_name,
+                    root / "2024" / "second.jpg",
+                    root / "toAnalyze" / "private.jpg",
+                ],
+            )
             thumbnail.close()
             content.close()
 
@@ -88,10 +127,38 @@ class BrowserWebTests(unittest.TestCase):
         entry = BrowserMedia(
             "media", "2024/IMG.jpg", "PHOTO", "jpg", "PRESENT", "2024-01-01T10:00:00",
             "Camera", "BATCH", "IMG.jpg", "2024/IMG.jpg", 1,
+            "WHATSAPP", 8000, 2000, 4.0, "LANDSCAPE", True,
+            True, "FILENAME_PATTERN",
         )
         entries = [entry] * 100_000
-        filtered = _filtered_entries(entries, {"year": "2024", "q": "img"})
+        filtered = _filtered_entries(
+            entries,
+            {
+                "year": "2024",
+                "q": "img",
+                "source_type": "WHATSAPP",
+                "min_width": "8000",
+                "max_height": "2000",
+                "min_aspect": "4",
+                "panorama": "yes",
+                "orientation": "LANDSCAPE",
+                "whatsapp": "yes",
+            },
+        )
         self.assertEqual(len(filtered), 100_000)
+
+        self.assertEqual(
+            _filtered_entries(entries, {"min_width": "8001"}),
+            [],
+        )
+        self.assertEqual(
+            _filtered_entries(entries, {"panorama": "no"}),
+            [],
+        )
+        self.assertEqual(
+            _filtered_entries(entries, {"whatsapp": "no"}),
+            [],
+        )
 
 
 if __name__ == "__main__":

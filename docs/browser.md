@@ -60,13 +60,28 @@ V1 filters are:
 - month based on effective date, independent of physical directories;
 - photos or videos;
 - source;
+- source provenance type, such as `WHATSAPP`, `CAMERA`, or `OLD_DISK`;
 - extension.
+- inclusive minimum and maximum display width in pixels;
+- inclusive minimum and maximum display height in pixels;
+- inclusive minimum and maximum aspect ratio;
+- panorama state;
+- conservative WhatsApp evidence derived from cataloged filenames, paths, and source-folder context;
+- orientation class (`LANDSCAPE`, `PORTRAIT`, `SQUARE`, or `UNKNOWN`).
+
+Numeric and derived filters use normalized catalog metadata and exclude records where the requested field has not been extracted. Source name and source provenance type remain separate filters; folder names do not implicitly rewrite registered provenance.
+
+WhatsApp evidence is also separate from registered provenance. It recognizes anchored WhatsApp filename forms such as `IMG-YYYYMMDD-WA####` and exact known path components such as `WhatsApp Images` or `WhatsApp Video`. The result and its reason are visible on the media detail page. A negative result means that no supported evidence was found; it does not prove that WhatsApp was never involved.
+
+Gallery thumbnails with positive WhatsApp evidence display a small green chat-and-phone badge in the lower-left corner. The badge has an accessible label and tooltip containing the evidence reason; it is rendered by the local page without external assets.
+
+The individual media detail preview repeats the badge at a larger size in its lower-left corner so the origin evidence remains immediately visible outside the gallery.
 
 Text search covers current filename, original filename, original relative path, raw and normalized source context, source name, and import batch. Optional simple filters such as GPS availability, duplicate state, and RAW state are added only when supported cheaply by the final indexed schema.
 
 Default ordering is effective capture date ascending with deterministic media-ID tie-breaking. Other options are descending capture date, filename, file size, and import date. Date-only precision must not be presented as a genuine midnight capture time.
 
-The implementation uses deterministic pages of 60 entries. Its filter shape has a 100,000-entry regression test; cursor pagination can replace deep offsets later only if representative measurements justify it.
+The implementation uses deterministic pages with a user-selectable size of 100, 200, or 500 entries and defaults to 100. The compact gallery uses 120-pixel minimum columns, small gaps, and 256-pixel cached thumbnails so substantially more media fit on screen without serving full originals. The selected page size is retained with filters and detail navigation. Its filter shape has a 100,000-entry regression test; cursor pagination can replace deep offsets later only if representative measurements justify it.
 
 ## Detail View
 
@@ -91,6 +106,8 @@ The detail page has a large preview, a compact summary, and structured catalog s
 - immutable manual review decisions.
 
 Previous and next links retain the active filter, search, and sort state. Left and right arrow keys navigate when focus is not inside an input; Escape returns to the gallery.
+
+The preview also places large previous and next slider controls at its left and right edges. These controls and the keyboard arrow shortcuts share the same filtered navigation targets. A control is omitted when no media exists in that direction.
 
 Photos use a larger cached preview with fit-to-screen behavior and optional basic zoom. Videos use native `<video controls>` only when the browser can play the original codec. Unsupported content displays `Preview unavailable in browser`; Browser V1 does not automatically transcode the library.
 

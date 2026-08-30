@@ -38,7 +38,7 @@ from media_toolkit.dates.service import (
     list_date_resolutions,
     run_date_resolution,
 )
-from media_toolkit.database_browser import build_datasette_metadata
+from media_toolkit.database_browser import build_datasette_command, build_datasette_metadata
 from media_toolkit.duplicates.service import (
     export_exact_duplicate_report,
     list_exact_duplicates,
@@ -612,13 +612,9 @@ def _handle_db_browse(args: argparse.Namespace, config: AppConfig) -> int:
             "Run: .venv/bin/python -m pip install -e '.[database]'."
         )
     metadata = build_datasette_metadata(config.cache, profile.database)
-    command = [
-        sys.executable, "-m", "datasette", "serve",
-        "--immutable", str(profile.database),
-        "--metadata", str(metadata),
-        "--host", "127.0.0.1",
-        "--port", str(args.port),
-    ]
+    command = build_datasette_command(
+        sys.executable, profile.database, metadata, args.port
+    )
     print(f"Database Browser running at: http://127.0.0.1:{args.port}")
     try:
         subprocess.run(command, check=True)

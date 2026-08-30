@@ -12,6 +12,22 @@ The project intends to follow Semantic Versioning once stable public releases be
 
 - Refactored Local Media Browser detail pages to display complete catalog-backed identity, location, technical metadata, date, hash, provenance, association, extraction-evidence, and review-decision records in readable sections.
 
+- Fixed Local Database Browser failures after metadata or other catalog updates by replacing Datasette immutable mode with its read-only monitored connection behavior.
+
+- Added Local Media Browser filters for inclusive width, height, and aspect-ratio ranges, panorama state, orientation class, and registered source provenance type.
+
+- Added explainable, catalog-only WhatsApp evidence classification and filtering using conservative filename patterns and exact known path components without rewriting registered provenance.
+
+- Compacted the Local Media Browser gallery and added persistent 100, 200, and 500 item pagination choices with smaller external thumbnails.
+
+- Added a small accessible WhatsApp evidence badge to the lower-left corner of matching gallery thumbnails.
+
+- Added a larger WhatsApp evidence badge to matching individual media previews.
+
+- Added previous and next slider arrows over individual media previews, synchronized with left and right keyboard navigation and active filters.
+
+- Corrected the WhatsApp evidence badge artwork with a distinct outlined chat bubble and centered white handset for clarity at both gallery and detail sizes.
+
 ### Added
 
 - Added incremental import-batch summaries and immutable completion verification, including full historical SHA-256 duplicate evidence.
