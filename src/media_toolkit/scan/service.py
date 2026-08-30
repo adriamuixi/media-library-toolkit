@@ -407,6 +407,7 @@ def _upsert_file(
     if existing is None:
         media_id = str(uuid4())
         location_id = str(uuid4())
+        observation_id = str(uuid4())
         connection.execute(
             """
             INSERT INTO media_file (
@@ -475,7 +476,7 @@ def _upsert_file(
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
-                str(uuid4()),
+                observation_id,
                 media_id,
                 source_id,
                 import_batch_id,
@@ -483,6 +484,20 @@ def _upsert_file(
                 discovered.relative_path,
                 discovered.relative_path,
                 None if parent == "." else parent,
+                timestamp,
+            ),
+        )
+        connection.execute(
+            """
+            INSERT INTO observation_location_history (
+                observation_location_id, observation_id, current_relative_path,
+                recorded_at, reason
+            ) VALUES (?, ?, ?, ?, 'INITIAL_INVENTORY')
+            """,
+            (
+                str(uuid4()),
+                observation_id,
+                discovered.relative_path,
                 timestamp,
             ),
         )

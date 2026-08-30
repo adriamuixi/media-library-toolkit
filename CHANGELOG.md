@@ -8,6 +8,8 @@ The project intends to follow Semantic Versioning once stable public releases be
 
 ### Added
 
+- Added mandatory provenance validation for all future WRITE plans.
+
 - Added append-only current-location history for every historical observation.
 
 - Added exclusive external CSV and JSON exports of immutable provenance records.

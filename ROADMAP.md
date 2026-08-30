@@ -51,14 +51,14 @@
 ## V1.5 — Immutable Provenance
 
 - [x] Import batch registration and identity
-- [ ] Immutable original filename and relative path
+- [x] Immutable original filename and relative path
 - [x] Separate logical content from historical file observations
-- [ ] Preserve every exact-duplicate observation and source
-- [ ] Raw and normalized source context fields
+- [x] Preserve every exact-duplicate observation and source
+- [x] Raw and normalized source context fields
 - [x] Current location tracking without overwriting original location
-- [ ] SQLite online backup command
+- [x] SQLite online backup command
 - [x] Open CSV and JSON provenance exports
-- [ ] Provenance preconditions for every future WRITE plan
+- [x] Provenance preconditions for every future WRITE plan
 
 ## V1.6 — Planning
 
