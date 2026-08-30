@@ -104,6 +104,19 @@ class ScanServiceTests(unittest.TestCase):
                 ],
             )
             self.assertTrue(all(not Path(row["relative_path"]).is_absolute() for row in rows))
+            with open_database(database) as connection:
+                observations = connection.execute(
+                    """
+                    SELECT original_relative_path, current_relative_path, import_batch_id
+                    FROM file_observation ORDER BY original_relative_path
+                    """
+                ).fetchall()
+            self.assertEqual(len(observations), 4)
+            self.assertEqual(
+                observations[0]["original_relative_path"],
+                observations[0]["current_relative_path"],
+            )
+            self.assertTrue(observations[0]["import_batch_id"])
 
     def test_repeated_scan_is_idempotent_and_preserves_media_identity(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:

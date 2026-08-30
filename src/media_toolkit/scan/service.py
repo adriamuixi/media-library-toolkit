@@ -36,6 +36,7 @@ class ScanRequest:
     batch_size: int
     generated_paths: tuple[Path, ...]
     resume_scan_id: str | None = None
+    import_batch_name: str | None = None
 
 
 @dataclass(frozen=True)
@@ -102,6 +103,41 @@ def _resolve_library_and_source(
             f"Source '{source_name}' does not exist in library '{library['name']}'."
         )
     return library["library_id"], source["source_id"]
+
+
+def _resolve_import_batch(
+    connection: sqlite3.Connection,
+    library_id: str,
+    source_id: str,
+    batch_name: str | None,
+) -> str:
+    """Resolve an explicit batch or preserve an unassigned scan as its own batch."""
+    name = batch_name.strip() if batch_name else f"UNASSIGNED_{source_id}"
+    row = connection.execute(
+        """
+        SELECT import_batch_id, source_id FROM import_batch
+        WHERE library_id = ? AND name = ? COLLATE NOCASE
+        """,
+        (library_id, name),
+    ).fetchone()
+    if row is not None:
+        if row["source_id"] != source_id:
+            raise CatalogError("Import batch belongs to a different source.")
+        return str(row["import_batch_id"])
+    batch_id = str(uuid4())
+    connection.execute(
+        """
+        INSERT INTO import_batch (
+            import_batch_id, library_id, source_id, name, description, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (
+            batch_id, library_id, source_id, name,
+            "Automatically created for a scan without an explicit import batch.",
+            _now(),
+        ),
+    )
+    return batch_id
 
 
 def _create_scan(
@@ -354,6 +390,7 @@ def _upsert_file(
     scan_id: str,
     library_id: str,
     source_id: str,
+    import_batch_id: str,
     discovered: DiscoveredFile,
     media_type: str,
 ) -> bool:
@@ -369,6 +406,7 @@ def _upsert_file(
     extension = discovered.path.suffix.casefold()
     if existing is None:
         media_id = str(uuid4())
+        location_id = str(uuid4())
         connection.execute(
             """
             INSERT INTO media_file (
@@ -413,7 +451,7 @@ def _upsert_file(
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
             """,
             (
-                str(uuid4()),
+                location_id,
                 media_id,
                 source_id,
                 discovered.relative_path,
@@ -425,6 +463,27 @@ def _upsert_file(
                 discovered.birth_time_ns,
                 scan_id,
                 scan_id,
+            ),
+        )
+        parent = str(Path(discovered.relative_path).parent)
+        connection.execute(
+            """
+            INSERT INTO file_observation (
+                observation_id, media_id, source_id, import_batch_id,
+                original_filename, original_relative_path, current_relative_path,
+                source_context_raw, observed_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                str(uuid4()),
+                media_id,
+                source_id,
+                import_batch_id,
+                discovered.path.name,
+                discovered.relative_path,
+                discovered.relative_path,
+                None if parent == "." else parent,
+                timestamp,
             ),
         )
         return True
@@ -538,6 +597,9 @@ def run_scan(request: ScanRequest) -> ScanSummary:
                 request.source_name,
                 request.environment,
             )
+            import_batch_id = _resolve_import_batch(
+                connection, library_id, source_id, request.import_batch_name
+            )
             if resumed:
                 resume_row = _resume_scan(
                     connection,
@@ -645,6 +707,7 @@ def run_scan(request: ScanRequest) -> ScanSummary:
                             active_scan_id,
                             library_id,
                             source_id,
+                            import_batch_id,
                             result,
                             media_type,
                         )

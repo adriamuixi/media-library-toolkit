@@ -186,6 +186,9 @@ def build_parser() -> argparse.ArgumentParser:
         "--source", required=True, dest="source_name", help="Name of the registered source."
     )
     scan_parser.add_argument(
+        "--batch", dest="import_batch_name", help="Existing import batch for new observations."
+    )
+    scan_parser.add_argument(
         "--root", required=True, type=Path, help="Physical source root for this scan."
     )
     scan_parser.add_argument(
@@ -577,6 +580,7 @@ def _handle_scan(args: argparse.Namespace, config: AppConfig) -> int:
             batch_size=config.scan_batch_size,
             generated_paths=_generated_paths(config, args.profile),
             resume_scan_id=args.resume,
+            import_batch_name=args.import_batch_name,
         )
     )
     print(f"Scan ID: {summary.scan_id}")
