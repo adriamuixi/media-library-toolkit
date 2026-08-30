@@ -27,3 +27,7 @@ Test and production catalogs use different files by default. This is safer than 
 ## Future Media Writes
 
 Future copy and move strategies must use immutable plans, source preconditions, destination conflict checks, operation journaling, and post-copy SHA-256 verification. Destination overwrite is prohibited.
+
+Before any WRITE operation moves or renames media, it must verify that immutable provenance exists, including the original relative path, source, and import batch. The operation must append a journal record and a current-location transition. It must not replace or delete the only historical reference to an origin.
+
+Production WRITE remains out of scope until a consistent SQLite backup command and open-format provenance export have been implemented and tested.

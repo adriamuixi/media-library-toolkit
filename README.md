@@ -10,6 +10,8 @@ Original media is read-only by default. No command may delete, move, rename, ove
 
 Scan and metadata commands inspect files but never modify them.
 
+Historical provenance is treated as immutable catalog data. Before physical organization is implemented, the catalog will retain each original filename, original relative path, source, import batch, source-folder context, current location, and every observed location of exact duplicate content. See [docs/provenance.md](docs/provenance.md).
+
 Catalog environments are physically separated by default:
 
 ```text

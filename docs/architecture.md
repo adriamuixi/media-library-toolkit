@@ -24,9 +24,24 @@ The CLI expresses user intent. Application services coordinate one process at a 
 
 Planning and execution are separate. A plan describes intended changes; only a dedicated WRITE operation may apply them.
 
-## Foundation Scope
+## Identity and Provenance Boundary
 
-The current implementation initializes external working directories and a versioned SQLite catalog. It does not scan or modify media.
+The V1 catalog will distinguish logical content from historical observations:
+
+```text
+media item identified by exact content
+        ├── observation in old disk and original path
+        ├── observation in laptop backup and original path
+        └── current retained physical location
+```
+
+A logical media item can have multiple file observations. Each observation belongs to a source and import batch and retains its immutable original filename, original relative path, and raw folder context. Reorganization changes current-location state through an audited operation; it never rewrites historical provenance.
+
+Reconstructible analysis data, such as hashes, dimensions, codecs, and extracted metadata, is separate from non-reconstructible history, such as original paths, import origin, and manual decisions. Backup policy prioritizes the latter.
+
+## Current Scope
+
+The current implementation initializes external working directories, maintains a versioned SQLite catalog, scans media read-only, and extracts metadata read-only. It does not modify media.
 
 ## Runtime State
 

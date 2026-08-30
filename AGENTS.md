@@ -35,6 +35,12 @@ WRITE must never be inferred from context or enabled by default.
 
 Physical files, catalog records, and proposed operations are separate concepts.
 
+Historical provenance is immutable data.
+
+Never discard original paths, source context, or import origin when reorganizing media.
+
+Physical cleanup must never erase provenance from the catalog.
+
 ## Current State
 
 The Foundation, V1.1 inventory, and V1.2 metadata phases are implemented. The project currently provides:
@@ -72,6 +78,10 @@ Explicit missing-file reconciliation has not yet been implemented.
 - Scan traversal must not follow symbolic links.
 - Generated catalogs, logs, reports, and caches must remain outside the media root.
 - Resume must reject changed or disappeared checkpointed entries rather than mixing source states silently.
+- Original filenames, original relative paths, source context, and import batches are non-reconstructible historical data and must be preserved immutably.
+- A current path may change only by adding an audited location transition; it must never replace the original path.
+- Every observed path and source for exact duplicate content must remain queryable after physical consolidation.
+- Catalog backup and open-format provenance export must exist before controlled production WRITE is enabled.
 
 ## Image Geometry
 

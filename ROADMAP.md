@@ -48,7 +48,19 @@
 - [ ] Configurable preferred-source ranking
 - [ ] Review reports
 
-## V1.5 — Planning
+## V1.5 — Immutable Provenance
+
+- [ ] Import batch registration and identity
+- [ ] Immutable original filename and relative path
+- [ ] Separate logical content from historical file observations
+- [ ] Preserve every exact-duplicate observation and source
+- [ ] Raw and normalized source context fields
+- [ ] Current location tracking without overwriting original location
+- [ ] SQLite online backup command
+- [ ] Open CSV and JSON provenance exports
+- [ ] Provenance preconditions for every future WRITE plan
+
+## V1.6 — Planning
 
 - [ ] Deterministic rename plans
 - [ ] Year and `no_date` organization plans
@@ -56,7 +68,7 @@
 - [ ] Conflict validation
 - [ ] CSV and JSON exports
 
-## V1.6 — Local Review
+## V1.7 — Local Review
 
 - [ ] Paginated local HTML interface
 - [ ] Pair and group duplicate review
@@ -64,7 +76,7 @@
 - [ ] Audited manual decisions
 - [ ] Cached previews outside media roots
 
-## V1.7 — Controlled WRITE
+## V1.8 — Controlled WRITE
 
 - [ ] Immutable checksummed plans
 - [ ] Copy and move strategies
@@ -74,7 +86,7 @@
 - [ ] Post-operation validation
 - [ ] No-overwrite guarantee
 
-## V1.8 — Incremental Imports
+## V1.9 — Incremental Imports
 
 - [ ] `toAnalyze` workflow
 - [ ] Full historical duplicate comparison

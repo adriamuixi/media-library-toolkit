@@ -40,3 +40,6 @@ The project intends to follow Semantic Versioning once stable public releases be
 - Added complete raw extractor JSON storage for traceability and future normalization.
 - Added metadata caching by extractor version, file size, modification time, and configuration signature.
 - Added per-file metadata failures and refusal when media changes after inventory.
+- Documented immutable historical provenance as a mandatory V1 feature before physical organization.
+- Defined import batches, logical content identity, and multiple historical file observations.
+- Added catalog backup and open-format provenance export as prerequisites for production WRITE.

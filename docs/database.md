@@ -25,6 +25,8 @@ Source default timezones use IANA names such as `Europe/Madrid`. A source does n
 
 A repeated scan of the same source-relative path updates the existing `media_file` and `file_location` rows rather than creating duplicates. Exact content identity will be added later through streaming SHA-256; path identity is intentionally not treated as content identity.
 
+The current inventory schema precedes exact content identity. The provenance phase will migrate it without discarding records so that a logical content item can reference multiple immutable file observations. `file_location` data must not be collapsed merely because observations later share a SHA-256 hash.
+
 Absolute scan roots are retained in `scan.root_path_snapshot` for traceability only. Portable file location queries use `file_location.relative_path`.
 
 Checkpoints are written in the same transaction as inventory changes and progress counters. They remain available while a scan is `RUNNING` or `FAILED` and are deleted transactionally when the scan completes.
@@ -35,6 +37,19 @@ Checkpoints are written in the same transaction as inventory changes and progres
 - `media_metadata` stores the latest successful normalized values for fast queries. These include geometry, panorama state, video duration, codecs, bitrate, frame rate, rotation, dynamic range, audio properties, and selected camera fields.
 
 File size remains on both `media_file` and `file_location` because it belongs to inventory identity and precondition validation. Duration is stored as integer milliseconds in `media_metadata` to avoid floating-point comparison ambiguity.
+
+## Planned Provenance Tables
+
+The V1 provenance migration will introduce or evolve records for:
+
+- `import_batch`: a stable identifier, source, label, and registration timestamps for one incorporation set;
+- `media_item`: logical content identity established by exact SHA-256;
+- `file_observation`: every historical appearance of content at a source-relative path;
+- current location history: audited transitions without replacing the immutable original path.
+
+Each observation must retain at least its original filename, original relative path, source, import batch, and current relative path when one exists. Optional raw source context is stored independently from any later normalized value and confidence. Multiple observations may reference one logical item, and no duplicate-consolidation process may delete those observations.
+
+Catalog backups use SQLite's consistent online backup mechanism rather than copying an active database file directly. CSV and JSON provenance exports are secondary open-format safeguards, not the catalog of record.
 
 ## Migrations
 
