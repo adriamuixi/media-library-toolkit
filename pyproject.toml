@@ -18,6 +18,9 @@ dependencies = []
 dev = [
   "pytest>=8,<10",
 ]
+review = [
+  "Flask>=3,<4",
+]
 
 [project.scripts]
 media = "media_toolkit.cli:main"

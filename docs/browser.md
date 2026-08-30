@@ -18,7 +18,7 @@ no_date/
 
 ## Dependencies and Architecture
 
-The browser will be an optional installation extra so the core CLI remains dependency-light. The planned stack is:
+The browser and local review interface use the optional review installation extra so the core CLI remains dependency-light. Install it with the documented review extra. The planned stack is:
 
 ```text
 Flask

@@ -53,7 +53,17 @@ media --help
 media --version
 ```
 
-The project has no runtime Python dependencies in the Foundation release.
+The core CLI has no required third-party runtime dependencies. Install the optional local-review interface with:
+
+```bash
+python -m pip install -e ".[review]"
+```
+
+For development and local review together, use:
+
+```bash
+python -m pip install -e ".[dev,review]"
+```
 
 ## Quick Start
 
