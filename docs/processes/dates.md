@@ -22,4 +22,4 @@ media dates list \
   --status suspicious
 ```
 
-Valid filters are `resolved`, `suspicious`, `conflict`, and `no-date`. A later local HTML interface will use these same catalog states for audited manual decisions.
+Valid filters are `resolved`, `suspicious`, `conflict`, and `no-date`. Local review decisions append immutable audit records and a new `MANUAL` catalog resolution without modifying media or prior date evidence.

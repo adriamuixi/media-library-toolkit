@@ -70,6 +70,7 @@ Catalog backups use SQLite's consistent online backup mechanism rather than copy
 
 - `date_resolution_attempt` retains immutable resolution history, complete candidate evidence as JSON, review reasons, input signatures, local and UTC values, timezone provenance, selected source, and confidence.
 - `media_date_resolution` points to the current resolution for fast queries without deleting older attempts.
+- `manual_review_decision` preserves immutable reviewer identity, rationale, timestamp, and decision payload. A manual date decision appends a new `MANUAL` resolution attempt; it never changes extractor metadata or deletes prior evidence.
 
 The local capture value and precision are always kept when a date is selected. UTC is nullable because cameras commonly omit an offset. A source's configured IANA timezone can supply the conversion while remaining visibly identified as source-derived rather than embedded metadata. Date-only evidence is marked explicitly so a storage placeholder cannot be mistaken for a captured midnight time.
 

@@ -73,7 +73,7 @@
 - [ ] Paginated local HTML interface
 - [ ] Pair and group duplicate review
 - [ ] Date-conflict and `no_date` review
-- [ ] Audited manual decisions
+- [x] Audited manual decisions
 - [ ] Cached previews outside media roots
 
 ## V1.8 — Controlled WRITE
