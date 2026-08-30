@@ -8,6 +8,8 @@ The project intends to follow Semantic Versioning once stable public releases be
 
 ### Added
 
+- Added exclusive external CSV and JSON exports of immutable provenance records.
+
 - Added SHA-256 logical media items linked to every matching historical observation.
 
 - Added immutable import-batch registration and listing for bounded source incorporations.

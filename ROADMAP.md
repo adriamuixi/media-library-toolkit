@@ -57,7 +57,7 @@
 - [ ] Raw and normalized source context fields
 - [ ] Current location tracking without overwriting original location
 - [ ] SQLite online backup command
-- [ ] Open CSV and JSON provenance exports
+- [x] Open CSV and JSON provenance exports
 - [ ] Provenance preconditions for every future WRITE plan
 
 ## V1.6 — Planning

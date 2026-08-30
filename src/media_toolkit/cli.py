@@ -45,6 +45,7 @@ from media_toolkit.logging_config import configure_logging
 from media_toolkit.metadata.exiftool import ExifToolAdapter
 from media_toolkit.metadata.ffprobe import FfprobeAdapter
 from media_toolkit.metadata.service import MetadataRequest, run_metadata
+from media_toolkit.provenance.service import export_provenance
 from media_toolkit.scan.safety import ensure_external_working_paths
 from media_toolkit.scan.service import ScanRequest, run_scan
 
@@ -179,6 +180,20 @@ def build_parser() -> argparse.ArgumentParser:
     batch_list_parser = batch_commands.add_parser("list", help="List import batches.")
     batch_list_parser.add_argument("--library")
     batch_list_parser.set_defaults(handler=_handle_batch_list)
+
+    provenance_parser = commands.add_parser("provenance", help="Export immutable provenance.")
+    provenance_commands = provenance_parser.add_subparsers(
+        dest="provenance_command", required=True
+    )
+    provenance_export_parser = provenance_commands.add_parser(
+        "export", help="Write an external CSV or JSON provenance export."
+    )
+    provenance_export_parser.add_argument("--library", required=True)
+    provenance_export_parser.add_argument("--output", required=True, type=Path)
+    provenance_export_parser.add_argument(
+        "--format", choices=("csv", "json"), default="csv", dest="report_format"
+    )
+    provenance_export_parser.set_defaults(handler=_handle_provenance_export)
 
     scan_parser = commands.add_parser(
         "scan", help="Inventory a registered source root without modifying media."
@@ -566,6 +581,16 @@ def _handle_batch_list(args: argparse.Namespace, config: AppConfig) -> int:
     return 0
 
 
+def _handle_provenance_export(args: argparse.Namespace, config: AppConfig) -> int:
+    profile = config.profile(args.profile)
+    count = export_provenance(
+        profile.database, profile.environment, args.library, args.output, args.report_format
+    )
+    print(f"Provenance export rows: {count}")
+    print(f"Export: {args.output.expanduser().resolve()}")
+    return 0
+
+
 def _generated_paths(config: AppConfig, profile_name: str | None) -> tuple[Path, ...]:
     profile = config.profile(profile_name)
     return (
@@ -888,6 +913,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             command_name = f"source-{args.source_command}"
         elif getattr(args, "batch_command", None):
             command_name = f"batch-{args.batch_command}"
+        elif getattr(args, "provenance_command", None):
+            command_name = f"provenance-{args.provenance_command}"
         elif getattr(args, "tools_command", None):
             command_name = f"tools-{args.tools_command}"
         elif getattr(args, "dates_command", None):
