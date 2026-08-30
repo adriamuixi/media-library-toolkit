@@ -44,6 +44,7 @@ from media_toolkit.duplicates.service import (
 )
 from media_toolkit.errors import MediaToolkitError
 from media_toolkit.hashing.service import HashRequest, list_hashes, run_hashing
+from media_toolkit.imports.service import get_import_batch_summary, verify_import_batch
 from media_toolkit.logging_config import configure_logging
 from media_toolkit.metadata.exiftool import ExifToolAdapter
 from media_toolkit.metadata.ffprobe import FfprobeAdapter
@@ -193,6 +194,23 @@ def build_parser() -> argparse.ArgumentParser:
     batch_list_parser = batch_commands.add_parser("list", help="List import batches.")
     batch_list_parser.add_argument("--library")
     batch_list_parser.set_defaults(handler=_handle_batch_list)
+
+    imports_parser = commands.add_parser(
+        "import", help="Inspect and verify incremental import batches without media mutation."
+    )
+    imports_commands = imports_parser.add_subparsers(dest="imports_command", required=True)
+    imports_summary_parser = imports_commands.add_parser(
+        "summary", help="Show scan, processing, and historical duplicate evidence for one batch."
+    )
+    imports_summary_parser.add_argument("--library", required=True)
+    imports_summary_parser.add_argument("--batch", required=True, dest="batch_name")
+    imports_summary_parser.set_defaults(handler=_handle_import_summary)
+    imports_verify_parser = imports_commands.add_parser(
+        "verify", help="Persist an immutable completion record after all read-only stages succeed."
+    )
+    imports_verify_parser.add_argument("--library", required=True)
+    imports_verify_parser.add_argument("--batch", required=True, dest="batch_name")
+    imports_verify_parser.set_defaults(handler=_handle_import_verify)
 
     provenance_parser = commands.add_parser("provenance", help="Export immutable provenance.")
     provenance_commands = provenance_parser.add_subparsers(
@@ -688,6 +706,32 @@ def _handle_batch_list(args: argparse.Namespace, config: AppConfig) -> int:
     return 0
 
 
+def _print_import_summary(summary) -> None:
+    print(f"Import batch: {summary.name}")
+    print(f"Observations: {summary.observation_count}")
+    print(f"Hashed: {summary.hashed_count}")
+    print(f"Metadata extracted: {summary.metadata_count}")
+    print(f"Date resolved: {summary.dated_count}")
+    print(f"Historical duplicate observations: {summary.historical_duplicate_observation_count}")
+    print(f"Verified at: {summary.verified_at or '-'}")
+
+
+def _handle_import_summary(args: argparse.Namespace, config: AppConfig) -> int:
+    profile = config.profile(args.profile)
+    _print_import_summary(
+        get_import_batch_summary(profile.database, profile.environment, args.library, args.batch_name)
+    )
+    return 0
+
+
+def _handle_import_verify(args: argparse.Namespace, config: AppConfig) -> int:
+    profile = config.profile(args.profile)
+    _print_import_summary(
+        verify_import_batch(profile.database, profile.environment, args.library, args.batch_name)
+    )
+    return 0
+
+
 def _handle_provenance_export(args: argparse.Namespace, config: AppConfig) -> int:
     profile = config.profile(args.profile)
     count = export_provenance(
@@ -1135,6 +1179,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             command_name = f"source-{args.source_command}"
         elif getattr(args, "batch_command", None):
             command_name = f"batch-{args.batch_command}"
+        elif getattr(args, "imports_command", None):
+            command_name = f"import-{args.imports_command}"
         elif getattr(args, "provenance_command", None):
             command_name = f"provenance-{args.provenance_command}"
         elif getattr(args, "plan_command", None):

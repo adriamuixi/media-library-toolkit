@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted for planned V1 implementation.
+Accepted and implemented in V1.
 
 ## Context
 

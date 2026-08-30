@@ -2,7 +2,7 @@
 
 Media Library Toolkit is a local, safety-first command-line application for building a durable catalog of personal photographs and videos. It is designed for large libraries, repeatable imports, exact duplicate detection, traceable naming, and controlled year-based organization.
 
-The project is being built incrementally. The current release provides read-only inventory scans, metadata extraction, capture-date resolution, media associations, exact SHA-256 analysis, immutable provenance, catalog backups, and open provenance exports.
+The current release provides read-only inventory scans, metadata extraction, capture-date resolution, media associations, exact SHA-256 analysis, immutable provenance, catalog backups, controlled organization, local review and browsing, and verified incremental import batches.
 
 ## Safety
 
@@ -14,9 +14,9 @@ The `media hashes calculate` command reads cataloged files in bounded chunks, re
 
 Historical provenance is immutable catalog data. The catalog retains each original filename, original relative path, source, import batch, source-folder context, current location, and every observed location of exact duplicate content. See [docs/provenance.md](docs/provenance.md).
 
-A later V1 Local Media Browser will provide a loopback-only, read-only visual gallery over the organized library and SQLite catalog. It will include `no_date`, always exclude `toAnalyze`, cache thumbnails outside media roots, and expose original provenance without modifying media. See [docs/browser.md](docs/browser.md).
+A Local Media Browser provides a loopback-only, read-only visual gallery over the organized library and SQLite catalog. It includes `no_date`, always excludes `toAnalyze`, caches thumbnails outside media roots, and exposes original provenance without modifying media. See [docs/browser.md](docs/browser.md).
 
-The planned Local Database Browser is a separate loopback-only, read-only Datasette interface for technical SQLite inspection, saved queries, migrations, and relationships. See [docs/database-browser.md](docs/database-browser.md).
+The Local Database Browser is a separate loopback-only, read-only Datasette interface for technical SQLite inspection, saved queries, migrations, and relationships. See [docs/database-browser.md](docs/database-browser.md).
 
 Catalog environments are physically separated by default:
 

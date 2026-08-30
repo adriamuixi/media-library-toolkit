@@ -48,7 +48,7 @@ SQLite remains the source of truth for identity, current and original paths, eff
 
 Implementation waits until current organized paths and immutable provenance exist. Browser queries must never infer catalog history by walking the organized directories. Missing physical files remain visible from SQLite with a `FILE MISSING` state.
 
-The first query indexes will be chosen after the final provenance and duplicate schemas exist. Likely access paths include effective local capture date, media type, extension, source, current relative path, original filename, and duplicate membership. Indexes require representative query-plan measurements rather than speculative bulk creation.
+The browser relies on the existing catalog indexes for media type, current paths, dates, hashes, and provenance. Additional indexes require representative query-plan measurements rather than speculative bulk creation.
 
 ## Gallery
 
@@ -66,7 +66,7 @@ Text search covers current filename, original filename, original relative path, 
 
 Default ordering is effective capture date ascending with deterministic media-ID tie-breaking. Other options are descending capture date, filename, file size, and import date. Date-only precision must not be presented as a genuine midnight capture time.
 
-The initial implementation uses bounded `LIMIT` and `OFFSET` pages, defaulting to approximately 100 items. Query shape and latency will be measured at 100,000 synthetic records. Cursor pagination may replace deep offsets only if measurements justify it.
+The implementation uses deterministic pages of 60 entries. Its filter shape has a 100,000-entry regression test; cursor pagination can replace deep offsets later only if representative measurements justify it.
 
 ## Detail View
 

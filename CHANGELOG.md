@@ -8,6 +8,8 @@ The project intends to follow Semantic Versioning once stable public releases be
 
 ### Added
 
+- Added incremental import-batch summaries and immutable completion verification, including full historical SHA-256 duplicate evidence.
+
 - Added Browser V0: a loopback-only read-only Flask gallery for organized photos with media-ID serving, Unicode-safe `toAnalyze` exclusion, external thumbnails, year filtering, and missing-file detail states.
 
 - Expanded Local Media Browser with video playback and external ffmpeg thumbnails, provenance search and filters, technical detail, duplicate observations, filtered navigation, and keyboard shortcuts.

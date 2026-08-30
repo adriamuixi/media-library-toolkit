@@ -125,10 +125,10 @@
 
 ## V1.10 — Incremental Imports
 
-- [ ] `toAnalyze` workflow
-- [ ] Full historical duplicate comparison
-- [ ] Import batch summaries
-- [ ] Verified batch completion
+- [x] `toAnalyze` workflow verification
+- [x] Full historical duplicate comparison
+- [x] Import batch summaries
+- [x] Immutable verified batch completion
 
 ## Later Versions
 
