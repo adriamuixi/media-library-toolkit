@@ -55,7 +55,7 @@
 - [x] Separate logical content from historical file observations
 - [ ] Preserve every exact-duplicate observation and source
 - [ ] Raw and normalized source context fields
-- [ ] Current location tracking without overwriting original location
+- [x] Current location tracking without overwriting original location
 - [ ] SQLite online backup command
 - [x] Open CSV and JSON provenance exports
 - [ ] Provenance preconditions for every future WRITE plan
