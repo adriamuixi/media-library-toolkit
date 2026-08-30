@@ -38,12 +38,18 @@ ExifTool and ffprobe are optional for Foundation and scan commands. Check their 
 
 ## Installation
 
-Create an isolated environment and install the project in editable mode:
+On a new Debian or Ubuntu installation, use the bootstrap script. It detects missing Python support packages, and the explicit option installs them before creating an isolated environment:
 
 ```bash
-python3 -m venv .venv
+git clone https://github.com/adriamuixi/media-library-toolkit.git
+cd media-library-toolkit
+./scripts/bootstrap.sh --install-system-dependencies
+```
+
+The default bootstrap installs the project, development tools, and the optional local-review interface. It creates `.venv`; activate it with:
+
+```bash
 source .venv/bin/activate
-python -m pip install -e .
 ```
 
 The `media` command is then available:
@@ -53,17 +59,13 @@ media --help
 media --version
 ```
 
-The core CLI has no required third-party runtime dependencies. Install the optional local-review interface with:
+For a core-only setup without development or local-review dependencies:
 
 ```bash
-python -m pip install -e ".[review]"
+./scripts/bootstrap.sh --runtime
 ```
 
-For development and local review together, use:
-
-```bash
-python -m pip install -e ".[dev,review]"
-```
+The bootstrap only invokes `apt-get` when `--install-system-dependencies` is explicitly supplied.
 
 ## Quick Start
 
