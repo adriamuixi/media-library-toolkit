@@ -78,7 +78,7 @@
 
 ## V1.8 — Controlled WRITE
 
-- [ ] Immutable checksummed plans
+- [x] Immutable checksummed plans
 - [ ] Copy and move strategies
 - [ ] Copy verification with SHA-256
 - [ ] Explicit WRITE confirmation

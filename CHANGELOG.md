@@ -8,6 +8,8 @@ The project intends to follow Semantic Versioning once stable public releases be
 
 ### Added
 
+- Added SQLite-enforced immutable organization plan content and items with checksum protection.
+
 - Added a Debian and Ubuntu bootstrap installer that creates a virtual environment and installs optional review dependencies.
 
 - Added immutable audited manual date decisions that append catalog evidence without modifying media.

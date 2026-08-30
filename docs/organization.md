@@ -8,6 +8,8 @@ An active, detected Live Photo, RAW/JPEG, or sidecar relation is planned as one 
 
 Destination collisions are recorded as CONFLICT plan items. Ambiguous active associations are recorded as BLOCKED plan items. Review plan items with the plan list command, or produce a new external CSV or JSON review file with the plan export command. Exports refuse paths inside cataloged media roots and refuse to overwrite an existing file.
 
+Organization plan content, items, and checksums are immutable at the SQLite layer. A later controlled WRITE workflow may advance a plan status, but cannot alter the reviewed set of destinations.
+
 Organization changes current physical locations but never changes historical provenance. A plan must carry the observation identity and immutable original relative path. Associated Live Photos, RAW and JPEG pairs, and sidecars must be planned together. Destination names must preserve the original filename component.
 
 Active `LIVE_PHOTO_PAIR`, `RAW_JPEG_PAIR`, and `SIDECAR_ASSOCIATION` records form indivisible planning groups. A conflict must be reviewed before planning. Inactive relations remain historical evidence but do not automatically join a new operation plan.

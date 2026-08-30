@@ -41,6 +41,17 @@ class PlanningServiceTests(unittest.TestCase):
             self.assertEqual(len(rows), 2)
             self.assertTrue(all(row["destination_relative_path"] == "no_date/IMG.jpg" for row in rows))
             self.assertTrue(all(row["status"] == "CONFLICT" for row in rows))
+            with open_database(database) as connection:
+                with self.assertRaisesRegex(Exception, "immutable"):
+                    connection.execute(
+                        "UPDATE organization_plan SET checksum = ? WHERE plan_id = ?",
+                        ("0" * 64, summary.plan_id),
+                    )
+                with self.assertRaisesRegex(Exception, "immutable"):
+                    connection.execute(
+                        "UPDATE organization_plan_item SET status = 'PROPOSED' WHERE plan_id = ?",
+                        (summary.plan_id,),
+                    )
 
     def test_plan_keeps_detected_associations_in_the_primary_year(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
