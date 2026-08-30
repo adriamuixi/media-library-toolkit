@@ -74,7 +74,7 @@
 - [x] Pair and group duplicate review
 - [x] Date-conflict and `no_date` review
 - [x] Audited manual decisions
-- [ ] Cached previews outside media roots
+- [x] Cached previews outside media roots
 
 ## V1.8 — Controlled WRITE
 

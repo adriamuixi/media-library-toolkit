@@ -470,6 +470,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     review_parser.add_argument("--library", required=True)
     review_parser.add_argument("--port", type=int, default=8080)
+    review_parser.add_argument(
+        "--root", type=Path, help="Optional media root for safe cached photo previews."
+    )
     review_parser.set_defaults(handler=_handle_review)
     return parser
 
@@ -984,7 +987,9 @@ def _handle_review(args: argparse.Namespace, config: AppConfig) -> int:
             ) from exc
         raise
     profile = config.profile(args.profile)
-    application = create_review_app(profile.database, profile.environment, args.library)
+    application = create_review_app(
+        profile.database, profile.environment, args.library, args.root, config.cache
+    )
     print(f"Local review running at: http://127.0.0.1:{args.port}")
     application.run(host="127.0.0.1", port=args.port, debug=False)
     return 0

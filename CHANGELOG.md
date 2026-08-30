@@ -14,6 +14,8 @@ The project intends to follow Semantic Versioning once stable public releases be
 
 - Added a loopback-only paginated local review interface for exact duplicate groups and date review states.
 
+- Added safe external cached JPEG previews for cataloged photos in Local Review.
+
 - Added deterministic read-only year-or-no-date organization plans with checksums and explicit destination-conflict records.
 
 - Added association-aware organization planning that keeps detected related files in one planned year directory.

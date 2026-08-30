@@ -234,7 +234,7 @@ media provenance export
 media plan create --library LIBRARY
 media plan list --id PLAN_ID
 media plan export --id PLAN_ID --output PATH
-media review --library LIBRARY --port 8080
+media review --library LIBRARY --root MEDIA_ROOT --port 8080
 ```
 
 Use `media COMMAND --help` for command-specific help.

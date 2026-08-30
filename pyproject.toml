@@ -20,6 +20,7 @@ dev = [
 ]
 review = [
   "Flask>=3,<4",
+  "Pillow>=10,<12",
 ]
 
 [project.scripts]

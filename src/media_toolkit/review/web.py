@@ -2,19 +2,28 @@
 
 from __future__ import annotations
 
+from hashlib import sha256
 from pathlib import Path
 
-from flask import Flask, abort, render_template_string, request
+from flask import Flask, abort, render_template_string, request, send_file
+from PIL import Image, ImageOps
 
 from media_toolkit.catalog.database import open_database, require_database
-from media_toolkit.errors import CatalogError
+from media_toolkit.errors import CatalogError, MediaToolkitError
+from media_toolkit.scan.safety import ensure_external_working_paths, resolve_cataloged_file, resolve_media_root
 
 
 PAGE_SIZE = 50
 
 
-def create_review_app(database: Path, environment: str, library_name: str) -> Flask:
-    """Create a catalog-backed local review app without filesystem media access."""
+def create_review_app(
+    database: Path,
+    environment: str,
+    library_name: str,
+    media_root: Path | None = None,
+    preview_cache: Path | None = None,
+) -> Flask:
+    """Create a catalog review app with optional safe external photo previews."""
     require_database(database, environment)
     with open_database(database) as connection:
         library = connection.execute(
@@ -23,6 +32,14 @@ def create_review_app(database: Path, environment: str, library_name: str) -> Fl
         ).fetchone()
     if library is None:
         raise CatalogError(f"Library '{library_name}' does not exist in the selected profile.")
+    resolved_root = None
+    resolved_cache = None
+    if media_root is not None:
+        if preview_cache is None:
+            raise CatalogError("A preview cache path is required when a media root is selected.")
+        resolved_root = resolve_media_root(media_root)
+        ensure_external_working_paths(resolved_root, (preview_cache,))
+        resolved_cache = preview_cache.expanduser().resolve() / "review-previews"
     library_id = library["library_id"]
     app = Flask(__name__)
     app.config.update(DATABASE=database, ENVIRONMENT=environment.upper(), LIBRARY_ID=library_id)
@@ -104,7 +121,57 @@ def create_review_app(database: Path, environment: str, library_name: str) -> Fl
             base_path=f"/dates?state={state.lower()}",
         )
 
+    @app.get("/previews/<media_id>")
+    def preview(media_id: str):
+        if resolved_root is None or resolved_cache is None:
+            abort(404, "Photo previews require an explicit media root.")
+        with open_database(database) as connection:
+            row = connection.execute(
+                """
+                SELECT mf.media_type, o.current_relative_path, fl.size_bytes, fl.modified_time_ns
+                FROM file_observation AS o
+                JOIN source AS s ON s.source_id = o.source_id
+                JOIN media_file AS mf ON mf.media_id = o.media_id
+                JOIN file_location AS fl
+                  ON fl.media_id = mf.media_id AND fl.source_id = o.source_id AND fl.present = 1
+                WHERE mf.media_id = ? AND s.library_id = ?
+                ORDER BY o.observed_at DESC, o.observation_id
+                LIMIT 1
+                """,
+                (media_id, library_id),
+            ).fetchone()
+        if row is None or row["media_type"] != "PHOTO":
+            abort(404, "A preview is available only for cataloged photos.")
+        try:
+            original = resolve_cataloged_file(resolved_root, row["current_relative_path"])
+            preview_path = _cached_photo_preview(
+                original, resolved_cache, media_id, int(row["size_bytes"]), int(row["modified_time_ns"])
+            )
+        except MediaToolkitError as exc:
+            abort(404, str(exc))
+        except (OSError, ValueError, Image.UnidentifiedImageError) as exc:
+            abort(422, f"Preview unavailable: {exc}")
+        return send_file(preview_path, mimetype="image/jpeg", conditional=True, max_age=0)
+
     return app
+
+
+def _cached_photo_preview(
+    original: Path, cache_root: Path, media_id: str, size_bytes: int, modified_ns: int
+) -> Path:
+    """Create or reuse a bounded JPEG preview entirely outside media roots."""
+    signature = sha256(f"{media_id}:{size_bytes}:{modified_ns}:480:v1".encode()).hexdigest()
+    destination = cache_root / signature[:2] / f"{signature}.jpg"
+    if destination.is_file():
+        return destination
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with Image.open(original) as image:
+        normalized = ImageOps.exif_transpose(image)
+        normalized.thumbnail((480, 480))
+        if normalized.mode not in ("RGB", "L"):
+            normalized = normalized.convert("RGB")
+        normalized.save(destination, format="JPEG", quality=85, optimize=True)
+    return destination
 
 
 def _page_number() -> int:
