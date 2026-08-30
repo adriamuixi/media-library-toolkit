@@ -18,7 +18,7 @@
 - [x] Relative paths
 - [x] Photo, video, sidecar, and unknown classification
 - [x] Idempotent repeated scans
-- [ ] Resume support
+- [x] Resume support
 - [x] Per-file error recording
 
 ## V1.2 — Metadata

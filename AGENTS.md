@@ -49,9 +49,10 @@ The Foundation phase is complete and the first V1.1 read-only inventory is imple
 - idempotent provenance source registration with optional IANA timezone validation;
 - streaming, non-following READ ONLY filesystem scans;
 - relative-path photo, video, sidecar, and unknown-file inventory;
-- idempotent file-location updates and per-entry traversal error records.
+- idempotent file-location updates and per-entry traversal error records;
+- resumable scans backed by transactional per-entry checkpoints.
 
-Resume and explicit missing-file reconciliation have not yet been implemented.
+Explicit missing-file reconciliation has not yet been implemented.
 
 ## Database Rules
 
@@ -65,6 +66,7 @@ Resume and explicit missing-file reconciliation have not yet been implemented.
 - Scans must store media locations relative to the runtime source root.
 - Scan traversal must not follow symbolic links.
 - Generated catalogs, logs, reports, and caches must remain outside the media root.
+- Resume must reject changed or disappeared checkpointed entries rather than mixing source states silently.
 
 ## Image Geometry
 

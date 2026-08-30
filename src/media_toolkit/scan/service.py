@@ -35,6 +35,7 @@ class ScanRequest:
     include_hidden: bool
     batch_size: int
     generated_paths: tuple[Path, ...]
+    resume_scan_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -49,6 +50,7 @@ class ScanSummary:
     skipped_count: int
     warning_count: int
     error_count: int
+    resumed: bool
 
 
 def _now() -> str:
@@ -57,6 +59,16 @@ def _now() -> str:
 
 def _normalize_relative_path(relative_path: str) -> str:
     return unicodedata.normalize("NFC", relative_path).casefold()
+
+
+def _scan_arguments(request: ScanRequest) -> str:
+    return json.dumps(
+        {
+            "include_hidden": request.include_hidden,
+            "media_filter": request.media_filter,
+        },
+        sort_keys=True,
+    )
 
 
 def _resolve_library_and_source(
@@ -100,13 +112,7 @@ def _create_scan(
     root: Path,
 ) -> str:
     scan_id = str(uuid4())
-    arguments = json.dumps(
-        {
-            "include_hidden": request.include_hidden,
-            "media_filter": request.media_filter,
-        },
-        sort_keys=True,
-    )
+    arguments = _scan_arguments(request)
     connection.execute(
         """
         INSERT INTO scan (
@@ -131,7 +137,186 @@ def _create_scan(
         ),
     )
     connection.commit()
+    LOGGER.info("Created resumable scan scan_id=%s", scan_id)
     return scan_id
+
+
+def _resume_scan(
+    connection: sqlite3.Connection,
+    request: ScanRequest,
+    library_id: str,
+    source_id: str,
+    root: Path,
+) -> sqlite3.Row:
+    requested_scan_id = request.resume_scan_id
+    if requested_scan_id is None:
+        raise ValueError("A resume scan identifier is required.")
+    arguments = _scan_arguments(request)
+    if requested_scan_id == "latest":
+        row = connection.execute(
+            """
+            SELECT *
+            FROM scan
+            WHERE
+                library_id = ?
+                AND source_id = ?
+                AND root_path_snapshot = ?
+                AND arguments_json = ?
+                AND status IN ('RUNNING', 'FAILED')
+            ORDER BY started_at DESC, scan_id DESC
+            LIMIT 1
+            """,
+            (library_id, source_id, str(root), arguments),
+        ).fetchone()
+        if row is None:
+            raise CatalogError("No matching resumable scan was found.")
+    else:
+        row = connection.execute(
+            "SELECT * FROM scan WHERE scan_id = ?",
+            (requested_scan_id,),
+        ).fetchone()
+        if row is None:
+            raise CatalogError(f"Scan '{requested_scan_id}' does not exist.")
+
+    if row["status"] not in {"RUNNING", "FAILED"}:
+        raise CatalogError(
+            f"Scan '{row['scan_id']}' has terminal status {row['status']} and cannot be resumed."
+        )
+    if row["library_id"] != library_id or row["source_id"] != source_id:
+        raise CatalogError("Resume library or source does not match the original scan.")
+    if row["root_path_snapshot"] != str(root):
+        raise CatalogError("Resume root does not match the original scan root.")
+    if row["arguments_json"] != arguments:
+        raise CatalogError("Resume options do not match the original scan options.")
+
+    checkpoint_count = connection.execute(
+        "SELECT COUNT(*) AS count FROM scan_checkpoint WHERE scan_id = ?",
+        (row["scan_id"],),
+    ).fetchone()["count"]
+    processed_count = (
+        int(row["discovered_count"])
+        + int(row["skipped_count"])
+        + int(row["warning_count"])
+        + int(row["error_count"])
+    )
+    if processed_count and not checkpoint_count:
+        raise CatalogError(
+            "This interrupted scan predates checkpoint support and cannot be resumed safely."
+        )
+
+    connection.execute(
+        "UPDATE scan SET status = 'RUNNING', finished_at = NULL WHERE scan_id = ?",
+        (row["scan_id"],),
+    )
+    connection.execute(
+        "UPDATE scan_checkpoint SET resume_seen = 0 WHERE scan_id = ?",
+        (row["scan_id"],),
+    )
+    connection.commit()
+    LOGGER.info("Resuming scan scan_id=%s", row["scan_id"])
+    return row
+
+
+def _checkpoint_key(relative_path: str | None) -> str:
+    return relative_path or ""
+
+
+def _load_checkpoint(
+    connection: sqlite3.Connection,
+    scan_id: str,
+    relative_path: str | None,
+) -> sqlite3.Row | None:
+    return connection.execute(
+        """
+        SELECT entry_kind, outcome, size_bytes, modified_time_ns
+        FROM scan_checkpoint
+        WHERE scan_id = ? AND relative_path = ?
+        """,
+        (scan_id, _checkpoint_key(relative_path)),
+    ).fetchone()
+
+
+def _record_checkpoint(
+    connection: sqlite3.Connection,
+    scan_id: str,
+    relative_path: str | None,
+    entry_kind: str,
+    outcome: str,
+    size_bytes: int | None = None,
+    modified_time_ns: int | None = None,
+) -> None:
+    connection.execute(
+        """
+        INSERT INTO scan_checkpoint (
+            scan_id,
+            relative_path,
+            entry_kind,
+            outcome,
+            size_bytes,
+            modified_time_ns,
+            created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            scan_id,
+            _checkpoint_key(relative_path),
+            entry_kind,
+            outcome,
+            size_bytes,
+            modified_time_ns,
+            _now(),
+        ),
+    )
+
+
+def _is_completed_checkpoint(
+    connection: sqlite3.Connection,
+    scan_id: str,
+    result: DiscoveredFile | SkippedEntry | TraversalIssue,
+    expected_outcome: str,
+) -> bool:
+    relative_path = result.relative_path
+    checkpoint = _load_checkpoint(connection, scan_id, relative_path)
+    if checkpoint is None:
+        return False
+
+    if isinstance(result, DiscoveredFile):
+        matches = (
+            checkpoint["entry_kind"] == "FILE"
+            and checkpoint["size_bytes"] == result.size_bytes
+            and checkpoint["modified_time_ns"] == result.modified_time_ns
+        )
+        compatible_outcome = (
+            checkpoint["outcome"] == expected_outcome
+            if expected_outcome == "FILTERED"
+            else checkpoint["outcome"] in {"NEW", "UPDATED"}
+        )
+        matches = matches and compatible_outcome
+    elif isinstance(result, SkippedEntry):
+        matches = (
+            checkpoint["entry_kind"] == "SKIPPED"
+            and checkpoint["outcome"] == expected_outcome
+        )
+    else:
+        matches = (
+            checkpoint["entry_kind"] == "ISSUE"
+            and checkpoint["outcome"] == expected_outcome
+        )
+
+    if not matches:
+        raise CatalogError(
+            "A previously checkpointed source entry changed during the interrupted scan: "
+            f"{relative_path or '<root>'}. Start a new scan instead."
+        )
+    connection.execute(
+        """
+        UPDATE scan_checkpoint
+        SET resume_seen = 1
+        WHERE scan_id = ? AND relative_path = ?
+        """,
+        (scan_id, _checkpoint_key(relative_path)),
+    )
+    return True
 
 
 def _record_issue(
@@ -343,6 +528,7 @@ def run_scan(request: ScanRequest) -> ScanSummary:
     skipped_count = 0
     warning_count = 0
     error_count = 0
+    resumed = request.resume_scan_id is not None
 
     try:
         with open_database(request.database) as connection:
@@ -352,17 +538,61 @@ def run_scan(request: ScanRequest) -> ScanSummary:
                 request.source_name,
                 request.environment,
             )
-            active_scan_id = _create_scan(
-                connection, request, library_id, source_id, root
-            )
+            if resumed:
+                resume_row = _resume_scan(
+                    connection,
+                    request,
+                    library_id,
+                    source_id,
+                    root,
+                )
+                active_scan_id = resume_row["scan_id"]
+                discovered_count = int(resume_row["discovered_count"])
+                updated_count = int(resume_row["updated_count"])
+                new_count = discovered_count - updated_count
+                skipped_count = int(resume_row["skipped_count"])
+                warning_count = int(resume_row["warning_count"])
+                error_count = int(resume_row["error_count"])
+            else:
+                active_scan_id = _create_scan(
+                    connection, request, library_id, source_id, root
+                )
             scan_id = active_scan_id
 
             processed_since_commit = 0
             for result in walk_regular_files(root, request.include_hidden):
                 if isinstance(result, SkippedEntry):
+                    if _is_completed_checkpoint(
+                        connection,
+                        active_scan_id,
+                        result,
+                        result.reason,
+                    ):
+                        continue
                     skipped_count += 1
+                    _record_checkpoint(
+                        connection,
+                        active_scan_id,
+                        result.relative_path,
+                        "SKIPPED",
+                        result.reason,
+                    )
                 elif isinstance(result, TraversalIssue):
+                    if _is_completed_checkpoint(
+                        connection,
+                        active_scan_id,
+                        result,
+                        result.error_type,
+                    ):
+                        continue
                     _record_issue(connection, active_scan_id, result)
+                    _record_checkpoint(
+                        connection,
+                        active_scan_id,
+                        result.relative_path,
+                        "ISSUE",
+                        result.error_type,
+                    )
                     if result.severity == "ERROR":
                         error_count += 1
                         LOGGER.error(
@@ -384,21 +614,55 @@ def run_scan(request: ScanRequest) -> ScanSummary:
                 else:
                     media_type = classify_path(result.path)
                     if not matches_media_filter(media_type, request.media_filter):
+                        if _is_completed_checkpoint(
+                            connection,
+                            active_scan_id,
+                            result,
+                            "FILTERED",
+                        ):
+                            continue
                         skipped_count += 1
-                        continue
-                    discovered_count += 1
-                    created = _upsert_file(
-                        connection,
-                        active_scan_id,
-                        library_id,
-                        source_id,
-                        result,
-                        media_type,
-                    )
-                    if created:
-                        new_count += 1
+                        _record_checkpoint(
+                            connection,
+                            active_scan_id,
+                            result.relative_path,
+                            "FILE",
+                            "FILTERED",
+                            result.size_bytes,
+                            result.modified_time_ns,
+                        )
                     else:
-                        updated_count += 1
+                        if _is_completed_checkpoint(
+                            connection,
+                            active_scan_id,
+                            result,
+                            "INVENTORIED",
+                        ):
+                            continue
+                        discovered_count += 1
+                        created = _upsert_file(
+                            connection,
+                            active_scan_id,
+                            library_id,
+                            source_id,
+                            result,
+                            media_type,
+                        )
+                        if created:
+                            new_count += 1
+                            outcome = "NEW"
+                        else:
+                            updated_count += 1
+                            outcome = "UPDATED"
+                        _record_checkpoint(
+                            connection,
+                            active_scan_id,
+                            result.relative_path,
+                            "FILE",
+                            outcome,
+                            result.size_bytes,
+                            result.modified_time_ns,
+                        )
 
                 processed_since_commit += 1
                 if processed_since_commit >= request.batch_size:
@@ -414,6 +678,21 @@ def run_scan(request: ScanRequest) -> ScanSummary:
                     connection.commit()
                     processed_since_commit = 0
 
+            if resumed:
+                unseen_checkpoint_count = connection.execute(
+                    """
+                    SELECT COUNT(*) AS count
+                    FROM scan_checkpoint
+                    WHERE scan_id = ? AND resume_seen = 0
+                    """,
+                    (active_scan_id,),
+                ).fetchone()["count"]
+                if unseen_checkpoint_count:
+                    raise CatalogError(
+                        "One or more previously checkpointed entries disappeared during the "
+                        "interrupted scan. Start a new scan instead."
+                    )
+
             status = "COMPLETED_WITH_ERRORS" if error_count else "COMPLETED"
             _update_scan_counts(
                 connection,
@@ -425,6 +704,10 @@ def run_scan(request: ScanRequest) -> ScanSummary:
                 error_count,
                 status=status,
                 finished_at=_now(),
+            )
+            connection.execute(
+                "DELETE FROM scan_checkpoint WHERE scan_id = ?",
+                (active_scan_id,),
             )
     except Exception:
         if scan_id is not None:
@@ -449,4 +732,5 @@ def run_scan(request: ScanRequest) -> ScanSummary:
         skipped_count=skipped_count,
         warning_count=warning_count,
         error_count=error_count,
+        resumed=resumed,
     )

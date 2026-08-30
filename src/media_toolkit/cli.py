@@ -162,6 +162,13 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Include hidden files and directories for this scan.",
     )
+    scan_parser.add_argument(
+        "--resume",
+        nargs="?",
+        const="latest",
+        metavar="SCAN_ID",
+        help="Resume a matching interrupted scan, optionally by explicit scan ID.",
+    )
     scan_parser.set_defaults(handler=_handle_scan)
     return parser
 
@@ -301,6 +308,7 @@ def _handle_scan(args: argparse.Namespace, config: AppConfig) -> int:
             include_hidden=args.include_hidden or config.scan_include_hidden,
             batch_size=config.scan_batch_size,
             generated_paths=_generated_paths(config, args.profile),
+            resume_scan_id=args.resume,
         )
     )
     print(f"Scan ID: {summary.scan_id}")
@@ -311,6 +319,7 @@ def _handle_scan(args: argparse.Namespace, config: AppConfig) -> int:
     print(f"Skipped: {summary.skipped_count}")
     print(f"Warnings: {summary.warning_count}")
     print(f"Errors: {summary.error_count}")
+    print(f"Resumed: {'YES' if summary.resumed else 'NO'}")
     return 0
 
 

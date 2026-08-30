@@ -101,6 +101,19 @@ media scan \
 
 The scanner stores only paths relative to `--root` as portable file locations. The absolute root is retained only in the scan execution record for diagnostics. Hidden entries and symbolic links are skipped by default.
 
+Resume the latest matching interrupted scan:
+
+```bash
+media scan \
+  --library "Personal Media" \
+  --source "iPhone Personal" \
+  --root "/Volumes/SMALL_TEST_LIBRARY" \
+  --media-type all \
+  --resume
+```
+
+Use `--resume SCAN_ID` to select a specific interrupted scan. Resume requires the same library, source, root, media filter, and hidden-entry policy.
+
 The reset command always refuses a production profile and any database whose internal environment marker is not `TEST`.
 
 ## Configuration

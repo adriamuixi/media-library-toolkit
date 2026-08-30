@@ -1,12 +1,15 @@
+from dataclasses import replace
 from hashlib import sha256
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from media_toolkit.catalog.database import initialize_database, open_database
 from media_toolkit.catalog.repositories import register_library, register_source
-from media_toolkit.errors import MediaToolkitError
+from media_toolkit.errors import CatalogError, MediaToolkitError
 from media_toolkit.scan.service import ScanRequest, run_scan
+from media_toolkit.scan.walker import walk_regular_files
 
 
 class ScanServiceTests(unittest.TestCase):
@@ -225,6 +228,173 @@ class ScanServiceTests(unittest.TestCase):
                     "SELECT error_type FROM scan_error"
                 ).fetchone()["error_type"]
             self.assertEqual(error_type, "SYMLINK_SKIPPED")
+
+    def test_interrupted_scan_resumes_from_committed_checkpoints(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            media_root, database, generated_paths = self._setup(
+                Path(temporary_directory)
+            )
+            self._create_fixture_files(media_root)
+            request = self._request(
+                media_root,
+                database,
+                generated_paths,
+                batch_size=1,
+            )
+
+            def interrupted_walk(root: Path, include_hidden: bool):
+                for index, result in enumerate(
+                    walk_regular_files(root, include_hidden), start=1
+                ):
+                    yield result
+                    if index == 2:
+                        raise RuntimeError("Synthetic interruption")
+
+            with patch(
+                "media_toolkit.scan.service.walk_regular_files",
+                new=interrupted_walk,
+            ):
+                with self.assertRaises(RuntimeError):
+                    run_scan(request)
+
+            with open_database(database) as connection:
+                failed_scan = connection.execute(
+                    "SELECT scan_id, status FROM scan"
+                ).fetchone()
+                checkpoint_count = connection.execute(
+                    "SELECT COUNT(*) AS count FROM scan_checkpoint"
+                ).fetchone()["count"]
+            self.assertEqual(failed_scan["status"], "FAILED")
+            self.assertGreater(checkpoint_count, 0)
+
+            summary = run_scan(
+                replace(request, resume_scan_id=failed_scan["scan_id"])
+            )
+
+            self.assertTrue(summary.resumed)
+            self.assertEqual(summary.scan_id, failed_scan["scan_id"])
+            self.assertEqual(summary.status, "COMPLETED")
+            self.assertEqual(summary.discovered_count, 4)
+            self.assertEqual(summary.new_count, 4)
+            with open_database(database) as connection:
+                checkpoint_count = connection.execute(
+                    "SELECT COUNT(*) AS count FROM scan_checkpoint"
+                ).fetchone()["count"]
+                scan_count = connection.execute(
+                    "SELECT COUNT(*) AS count FROM scan"
+                ).fetchone()["count"]
+            self.assertEqual(checkpoint_count, 0)
+            self.assertEqual(scan_count, 1)
+
+    def test_resume_latest_selects_matching_interrupted_scan(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            media_root, database, generated_paths = self._setup(
+                Path(temporary_directory)
+            )
+            (media_root / "one.jpg").write_bytes(b"one")
+            request = self._request(
+                media_root,
+                database,
+                generated_paths,
+                batch_size=1,
+            )
+
+            def interrupted_walk(root: Path, include_hidden: bool):
+                yield from walk_regular_files(root, include_hidden)
+                raise RuntimeError("Synthetic interruption")
+
+            with patch(
+                "media_toolkit.scan.service.walk_regular_files",
+                new=interrupted_walk,
+            ):
+                with self.assertRaises(RuntimeError):
+                    run_scan(request)
+
+            summary = run_scan(replace(request, resume_scan_id="latest"))
+
+            self.assertTrue(summary.resumed)
+            self.assertEqual(summary.discovered_count, 1)
+            self.assertEqual(summary.new_count, 1)
+
+    def test_resume_refuses_changed_checkpointed_file(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            media_root, database, generated_paths = self._setup(
+                Path(temporary_directory)
+            )
+            media_file = media_root / "one.jpg"
+            media_file.write_bytes(b"original")
+            request = self._request(
+                media_root,
+                database,
+                generated_paths,
+                batch_size=1,
+            )
+
+            def interrupted_walk(root: Path, include_hidden: bool):
+                yield from walk_regular_files(root, include_hidden)
+                raise RuntimeError("Synthetic interruption")
+
+            with patch(
+                "media_toolkit.scan.service.walk_regular_files",
+                new=interrupted_walk,
+            ):
+                with self.assertRaises(RuntimeError):
+                    run_scan(request)
+
+            with open_database(database) as connection:
+                scan_id = connection.execute("SELECT scan_id FROM scan").fetchone()[
+                    "scan_id"
+                ]
+            media_file.write_bytes(b"changed-content")
+
+            with self.assertRaises(CatalogError):
+                run_scan(replace(request, resume_scan_id=scan_id))
+
+    def test_resume_refuses_disappeared_checkpointed_file(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            media_root, database, generated_paths = self._setup(
+                Path(temporary_directory)
+            )
+            media_file = media_root / "one.jpg"
+            media_file.write_bytes(b"original")
+            request = self._request(
+                media_root,
+                database,
+                generated_paths,
+                batch_size=1,
+            )
+
+            def interrupted_walk(root: Path, include_hidden: bool):
+                yield from walk_regular_files(root, include_hidden)
+                raise RuntimeError("Synthetic interruption")
+
+            with patch(
+                "media_toolkit.scan.service.walk_regular_files",
+                new=interrupted_walk,
+            ):
+                with self.assertRaises(RuntimeError):
+                    run_scan(request)
+
+            with open_database(database) as connection:
+                scan_id = connection.execute("SELECT scan_id FROM scan").fetchone()[
+                    "scan_id"
+                ]
+            media_file.unlink()
+
+            with self.assertRaises(CatalogError):
+                run_scan(replace(request, resume_scan_id=scan_id))
+
+    def test_completed_scan_cannot_be_resumed(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            media_root, database, generated_paths = self._setup(
+                Path(temporary_directory)
+            )
+            (media_root / "one.jpg").write_bytes(b"one")
+            request = self._request(media_root, database, generated_paths)
+            completed = run_scan(request)
+
+            with self.assertRaises(CatalogError):
+                run_scan(replace(request, resume_scan_id=completed.scan_id))
 
 
 if __name__ == "__main__":

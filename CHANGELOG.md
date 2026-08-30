@@ -30,3 +30,6 @@ The project intends to follow Semantic Versioning once stable public releases be
 - Added non-fatal traversal error and warning records.
 - Added safeguards that keep generated state outside media roots.
 - Added default hidden-entry exclusion and non-following symlink behavior.
+- Added transactional scan checkpoints and validated interrupted-scan resume.
+- Added `--resume` latest-match selection and explicit `--resume SCAN_ID` selection.
+- Added conservative refusal when checkpointed source entries change or disappear.

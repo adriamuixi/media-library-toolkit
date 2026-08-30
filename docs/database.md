@@ -21,10 +21,13 @@ Source default timezones use IANA names such as `Europe/Madrid`. A source does n
 - `media_file` gives each discovered file a stable UUID and stores its current basic classification, size, original filename, discovery timestamps, and catalog status.
 - `file_location` stores source-relative paths, a normalized path for conflict analysis, filesystem timestamps, and first/last scan references.
 - `scan_error` stores non-fatal warnings and errors with relative paths and processing stages.
+- `scan_checkpoint` temporarily stores committed per-entry progress for interrupted-scan recovery.
 
 A repeated scan of the same source-relative path updates the existing `media_file` and `file_location` rows rather than creating duplicates. Exact content identity will be added later through streaming SHA-256; path identity is intentionally not treated as content identity.
 
 Absolute scan roots are retained in `scan.root_path_snapshot` for traceability only. Portable file location queries use `file_location.relative_path`.
+
+Checkpoints are written in the same transaction as inventory changes and progress counters. They remain available while a scan is `RUNNING` or `FAILED` and are deleted transactionally when the scan completes.
 
 ## Migrations
 
