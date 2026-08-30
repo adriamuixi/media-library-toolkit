@@ -73,6 +73,8 @@ The bootstrap only invokes `apt-get` when `--install-system-dependencies` is exp
 
 Read the [User Guide](docs/user-guide.md) before processing a personal library. It explains the safe workflow, the purpose of each command, local HTML interfaces, incremental imports, planning, and the explicit WRITE barrier with diagrams and copyable commands.
 
+Moving the Toolkit or its catalog to another computer? Read [Project and Catalog Migration](docs/migration.md). It gives the exact backup, restore, path-reconnection, cache, and validation steps.
+
 ## Quick Start
 
 Initialize a disposable test catalog:
