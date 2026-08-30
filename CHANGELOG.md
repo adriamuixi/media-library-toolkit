@@ -33,3 +33,10 @@ The project intends to follow Semantic Versioning once stable public releases be
 - Added transactional scan checkpoints and validated interrupted-scan resume.
 - Added `--resume` latest-match selection and explicit `--resume SCAN_ID` selection.
 - Added conservative refusal when checkpointed source entries change or disappear.
+- Added safe ExifTool and ffprobe discovery with `media tools check`.
+- Added the READ ONLY `media metadata` extraction command for photos and videos.
+- Added normalized image geometry, duration, codec, stream, camera, and color fields.
+- Added deterministic configurable orientation and panorama derivation.
+- Added complete raw extractor JSON storage for traceability and future normalization.
+- Added metadata caching by extractor version, file size, modification time, and configuration signature.
+- Added per-file metadata failures and refusal when media changes after inventory.

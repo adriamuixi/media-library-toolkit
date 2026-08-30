@@ -34,6 +34,10 @@ class AppConfig:
     default_media_mode: str
     require_write_confirmation: bool
     panorama_aspect_ratio_threshold: float
+    metadata_batch_size: int
+    metadata_timeout_seconds: int
+    exiftool_command: str
+    ffprobe_command: str
     scan_include_hidden: bool
     scan_batch_size: int
 
@@ -71,7 +75,13 @@ DEFAULTS: dict[str, Any] = {
         "default_media_mode": "read-only",
         "require_write_confirmation": True,
     },
-    "metadata": {"panorama_aspect_ratio_threshold": 2.0},
+    "metadata": {
+        "panorama_aspect_ratio_threshold": 2.0,
+        "batch_size": 100,
+        "timeout_seconds": 60,
+        "exiftool_command": "exiftool",
+        "ffprobe_command": "ffprobe",
+    },
     "scan": {"include_hidden": False, "batch_size": 500},
 }
 
@@ -144,6 +154,17 @@ def load_config(
             "The panorama aspect-ratio threshold must be greater than 1.0."
         )
 
+    metadata_batch_size = int(metadata["batch_size"])
+    if metadata_batch_size < 1:
+        raise ConfigurationError("The metadata batch size must be at least 1.")
+    metadata_timeout_seconds = int(metadata["timeout_seconds"])
+    if metadata_timeout_seconds < 1:
+        raise ConfigurationError("The metadata timeout must be at least 1 second.")
+    exiftool_command = str(metadata["exiftool_command"]).strip()
+    ffprobe_command = str(metadata["ffprobe_command"]).strip()
+    if not exiftool_command or not ffprobe_command:
+        raise ConfigurationError("Metadata tool commands cannot be empty.")
+
     scan_batch_size = int(scan["batch_size"])
     if scan_batch_size < 1:
         raise ConfigurationError("The scan batch size must be at least 1.")
@@ -160,6 +181,10 @@ def load_config(
         default_media_mode=default_media_mode,
         require_write_confirmation=bool(safety["require_write_confirmation"]),
         panorama_aspect_ratio_threshold=panorama_threshold,
+        metadata_batch_size=metadata_batch_size,
+        metadata_timeout_seconds=metadata_timeout_seconds,
+        exiftool_command=exiftool_command,
+        ffprobe_command=ffprobe_command,
         scan_include_hidden=bool(scan["include_hidden"]),
         scan_batch_size=scan_batch_size,
     )

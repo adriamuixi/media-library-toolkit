@@ -21,6 +21,10 @@ class ConfigTests(unittest.TestCase):
             self.assertTrue(production.database.is_relative_to(base))
             self.assertTrue(test.database.is_relative_to(base))
             self.assertEqual(config.panorama_aspect_ratio_threshold, 2.0)
+            self.assertEqual(config.metadata_batch_size, 100)
+            self.assertEqual(config.metadata_timeout_seconds, 60)
+            self.assertEqual(config.exiftool_command, "exiftool")
+            self.assertEqual(config.ffprobe_command, "ffprobe")
             self.assertFalse(config.scan_include_hidden)
             self.assertEqual(config.scan_batch_size, 500)
 
@@ -53,6 +57,18 @@ class ConfigTests(unittest.TestCase):
             config_path = base / "invalid-scan.toml"
             config_path.write_text(
                 "[scan]\nbatch_size = 0\n",
+                encoding="utf-8",
+            )
+
+            with self.assertRaises(ConfigurationError):
+                load_config(config_path, base_directory=base)
+
+    def test_metadata_settings_are_validated(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            base = Path(temporary_directory)
+            config_path = base / "invalid-metadata.toml"
+            config_path.write_text(
+                '[metadata]\nbatch_size = 0\nexiftool_command = ""\n',
                 encoding="utf-8",
             )
 

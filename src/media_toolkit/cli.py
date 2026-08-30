@@ -23,6 +23,9 @@ from media_toolkit.catalog.repositories import (
 from media_toolkit.config import AppConfig, load_config
 from media_toolkit.errors import MediaToolkitError
 from media_toolkit.logging_config import configure_logging
+from media_toolkit.metadata.exiftool import ExifToolAdapter
+from media_toolkit.metadata.ffprobe import FfprobeAdapter
+from media_toolkit.metadata.service import MetadataRequest, run_metadata
 from media_toolkit.scan.safety import ensure_external_working_paths
 from media_toolkit.scan.service import ScanRequest, run_scan
 
@@ -170,6 +173,40 @@ def build_parser() -> argparse.ArgumentParser:
         help="Resume a matching interrupted scan, optionally by explicit scan ID.",
     )
     scan_parser.set_defaults(handler=_handle_scan)
+
+    tools_parser = commands.add_parser(
+        "tools", help="Inspect external metadata tool availability."
+    )
+    tools_commands = tools_parser.add_subparsers(dest="tools_command", required=True)
+    tools_check_parser = tools_commands.add_parser(
+        "check", help="Check the configured ExifTool and ffprobe executables."
+    )
+    tools_check_parser.set_defaults(handler=_handle_tools_check)
+
+    metadata_parser = commands.add_parser(
+        "metadata", help="Extract photo and video metadata without modifying media."
+    )
+    metadata_parser.add_argument(
+        "--library", required=True, help="Name of the existing logical library."
+    )
+    metadata_parser.add_argument(
+        "--source", required=True, dest="source_name", help="Name of the registered source."
+    )
+    metadata_parser.add_argument(
+        "--root", required=True, type=Path, help="Physical source root used by the inventory scan."
+    )
+    metadata_parser.add_argument(
+        "--media-type",
+        choices=("photos", "videos", "all"),
+        default="all",
+        help="Restrict extraction to photos, videos, or both.",
+    )
+    metadata_parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Extract again even when an identical successful result is cached.",
+    )
+    metadata_parser.set_defaults(handler=_handle_metadata)
     return parser
 
 
@@ -323,6 +360,57 @@ def _handle_scan(args: argparse.Namespace, config: AppConfig) -> int:
     return 0
 
 
+def _handle_tools_check(args: argparse.Namespace, config: AppConfig) -> int:
+    adapters = (
+        ExifToolAdapter(
+            config.exiftool_command,
+            config.metadata_timeout_seconds,
+            config.panorama_aspect_ratio_threshold,
+        ),
+        FfprobeAdapter(
+            config.ffprobe_command,
+            config.metadata_timeout_seconds,
+            config.panorama_aspect_ratio_threshold,
+        ),
+    )
+    unavailable = False
+    for adapter in adapters:
+        status = adapter.status()
+        print(f"{status.name}: {'AVAILABLE' if status.available else 'UNAVAILABLE'}")
+        print(f"  Command: {status.command}")
+        print(f"  Version: {status.version or 'UNKNOWN'}")
+        if status.error:
+            print(f"  Error: {status.error}")
+        unavailable = unavailable or not status.available
+    return 1 if unavailable else 0
+
+
+def _handle_metadata(args: argparse.Namespace, config: AppConfig) -> int:
+    profile = config.profile(args.profile)
+    summary = run_metadata(
+        MetadataRequest(
+            database=profile.database,
+            environment=profile.environment,
+            library_name=args.library,
+            source_name=args.source_name,
+            root=args.root,
+            media_filter=args.media_type,
+            batch_size=config.metadata_batch_size,
+            generated_paths=_generated_paths(config, args.profile),
+            panorama_threshold=config.panorama_aspect_ratio_threshold,
+            timeout_seconds=config.metadata_timeout_seconds,
+            exiftool_command=config.exiftool_command,
+            ffprobe_command=config.ffprobe_command,
+            force=args.force,
+        )
+    )
+    print(f"Selected: {summary.selected_count}")
+    print(f"Extracted: {summary.extracted_count}")
+    print(f"Cached: {summary.cached_count}")
+    print(f"Errors: {summary.error_count}")
+    return 1 if summary.error_count else 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the CLI and convert expected failures into concise messages."""
     parser = build_parser()
@@ -336,7 +424,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             command_name = f"library-{args.library_command}"
         elif getattr(args, "source_command", None):
             command_name = f"source-{args.source_command}"
-        if args.command == "scan":
+        elif getattr(args, "tools_command", None):
+            command_name = f"tools-{args.tools_command}"
+        if args.command in {"scan", "metadata"}:
             ensure_external_working_paths(
                 args.root,
                 _generated_paths(config, args.profile),

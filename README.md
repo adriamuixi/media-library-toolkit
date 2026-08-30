@@ -2,13 +2,13 @@
 
 Media Library Toolkit is a local, safety-first command-line application for building a durable catalog of personal photographs and videos. It is designed for large libraries, repeatable imports, exact duplicate detection, traceable naming, and controlled year-based organization.
 
-The project is being built incrementally. The current release contains the Foundation layer: configuration, logging, an installable CLI, a versioned SQLite catalog, isolated test and production profiles, and a guarded test-catalog reset.
+The project is being built incrementally. The current release provides the Foundation layer, read-only inventory scans, and cached photo and video metadata extraction.
 
 ## Safety
 
 Original media is read-only by default. No command may delete, move, rename, overwrite, or modify original media unless it belongs to an explicitly reviewed WRITE workflow.
 
-The current Foundation commands do not inspect or modify media files.
+Scan and metadata commands inspect files but never modify them.
 
 Catalog environments are physically separated by default:
 
@@ -25,10 +25,10 @@ See [docs/safety.md](docs/safety.md) for the complete safety model.
 
 - Python 3.11 or newer
 - SQLite, provided by Python
-- ExifTool for a later metadata phase
-- ffprobe for a later video metadata phase
+- ExifTool for photograph metadata
+- ffprobe for video and audio stream metadata
 
-ExifTool and ffprobe are not required for the current Foundation commands.
+ExifTool and ffprobe are optional for Foundation and scan commands. Check their configured locations with `media tools check` before extracting metadata.
 
 ## Installation
 
@@ -114,6 +114,19 @@ media scan \
 
 Use `--resume SCAN_ID` to select a specific interrupted scan. Resume requires the same library, source, root, media filter, and hidden-entry policy.
 
+After a successful scan, extract metadata:
+
+```bash
+media tools check
+media metadata \
+  --library "Personal Media" \
+  --source "iPhone Personal" \
+  --root "/Volumes/SMALL_TEST_LIBRARY" \
+  --media-type all
+```
+
+Successful results are cached by extractor version, cataloged size and modification time, and normalization configuration. Use `--force` only when an intentional re-extraction is required. If a file changed after its scan, metadata extraction records an error and asks for a new scan.
+
 The reset command always refuses a production profile and any database whose internal environment marker is not `TEST`.
 
 ## Configuration
@@ -137,6 +150,8 @@ media library list
 media source add
 media source list
 media scan
+media tools check
+media metadata
 ```
 
 Use `media COMMAND --help` for command-specific help.

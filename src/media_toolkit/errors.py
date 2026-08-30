@@ -15,3 +15,7 @@ class DatabaseSafetyError(MediaToolkitError):
 
 class CatalogError(MediaToolkitError):
     """Raised when a catalog record cannot be created or resolved safely."""
+
+
+class ExternalToolError(MediaToolkitError):
+    """Raised when a required metadata tool cannot produce a valid result."""

@@ -23,13 +23,13 @@
 
 ## V1.2 — Metadata
 
-- [ ] ExifTool adapter for photographs
-- [ ] ffprobe adapter for videos
-- [ ] Image width, height, megapixels, and aspect ratio
-- [ ] Derived orientation and panorama classification
-- [ ] Normalized metadata
-- [ ] Raw extractor response storage
-- [ ] Cache invalidation by file signature
+- [x] ExifTool adapter for photographs
+- [x] ffprobe adapter for videos
+- [x] Image width, height, megapixels, and aspect ratio
+- [x] Derived orientation and panorama classification
+- [x] Normalized metadata
+- [x] Raw extractor response storage
+- [x] Cache invalidation by file signature
 
 ## V1.3 — Dates and Associations
 

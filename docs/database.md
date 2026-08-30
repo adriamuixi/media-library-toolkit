@@ -8,7 +8,7 @@ SQLite is the durable local catalog. Physical paths are not logical media identi
 - `catalog_metadata` contains a unique database ID and the TEST or PRODUCTION safety marker.
 - `library` represents a logical media library.
 - `source` records media provenance independently from runtime mount paths.
-- `scan` records traceable scan executions. Scanning itself is planned for the next phase.
+- `scan` records traceable scan executions.
 
 ## Catalog Registration
 
@@ -28,6 +28,13 @@ A repeated scan of the same source-relative path updates the existing `media_fil
 Absolute scan roots are retained in `scan.root_path_snapshot` for traceability only. Portable file location queries use `file_location.relative_path`.
 
 Checkpoints are written in the same transaction as inventory changes and progress counters. They remain available while a scan is `RUNNING` or `FAILED` and are deleted transactionally when the scan completes.
+
+## Metadata Tables
+
+- `metadata_extraction` is the immutable history of successful and failed ExifTool or ffprobe attempts. It stores the extractor version, input file signature, normalization configuration signature, raw JSON, and any error.
+- `media_metadata` stores the latest successful normalized values for fast queries. These include geometry, panorama state, video duration, codecs, bitrate, frame rate, rotation, dynamic range, audio properties, and selected camera fields.
+
+File size remains on both `media_file` and `file_location` because it belongs to inventory identity and precondition validation. Duration is stored as integer milliseconds in `media_metadata` to avoid floating-point comparison ambiguity.
 
 ## Migrations
 

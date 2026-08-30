@@ -37,7 +37,7 @@ Physical files, catalog records, and proposed operations are separate concepts.
 
 ## Current State
 
-The Foundation phase is complete and the first V1.1 read-only inventory is implemented. The project currently provides:
+The Foundation, V1.1 inventory, and V1.2 metadata phases are implemented. The project currently provides:
 
 - an installable Python CLI;
 - TOML configuration;
@@ -50,7 +50,12 @@ The Foundation phase is complete and the first V1.1 read-only inventory is imple
 - streaming, non-following READ ONLY filesystem scans;
 - relative-path photo, video, sidecar, and unknown-file inventory;
 - idempotent file-location updates and per-entry traversal error records;
-- resumable scans backed by transactional per-entry checkpoints.
+- resumable scans backed by transactional per-entry checkpoints;
+- read-only ExifTool photograph metadata extraction;
+- read-only ffprobe video metadata extraction;
+- normalized geometry, panorama, duration, codec, stream, and camera fields;
+- raw extractor JSON and signature-based metadata caching;
+- per-file metadata errors that do not abort the complete run.
 
 Explicit missing-file reconciliation has not yet been implemented.
 

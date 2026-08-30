@@ -22,6 +22,10 @@ require_write_confirmation = true
 
 [metadata]
 panorama_aspect_ratio_threshold = 2.0
+batch_size = 100
+timeout_seconds = 60
+exiftool_command = "exiftool"
+ffprobe_command = "ffprobe"
 
 [scan]
 include_hidden = false

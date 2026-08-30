@@ -3,10 +3,12 @@ from io import StringIO
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from media_toolkit.catalog.database import initialize_database
 from media_toolkit.catalog.repositories import register_library, register_source
 from media_toolkit.cli import main
+from media_toolkit.metadata.models import ToolStatus
 
 
 class CliTests(unittest.TestCase):
@@ -57,6 +59,37 @@ environment = "TEST"
             self.assertEqual(init_result, 0)
             self.assertEqual(reset_result, 0)
             self.assertIn("TEST catalog reset", output.getvalue())
+
+    def test_cli_checks_both_metadata_tools(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            base = Path(temporary_directory)
+            config_path = self._write_config(base)
+            previous_cwd = Path.cwd()
+            output = StringIO()
+            try:
+                __import__("os").chdir(base)
+                with (
+                    patch(
+                        "media_toolkit.cli.ExifToolAdapter.status",
+                        return_value=ToolStatus(
+                            "ExifTool", "/tools/exiftool", True, "13.0", None
+                        ),
+                    ),
+                    patch(
+                        "media_toolkit.cli.FfprobeAdapter.status",
+                        return_value=ToolStatus(
+                            "ffprobe", "ffprobe", False, None, "Executable was not found."
+                        ),
+                    ),
+                    redirect_stdout(output),
+                ):
+                    result = main(["--config", str(config_path), "tools", "check"])
+            finally:
+                __import__("os").chdir(previous_cwd)
+
+            self.assertEqual(result, 1)
+            self.assertIn("ExifTool: AVAILABLE", output.getvalue())
+            self.assertIn("ffprobe: UNAVAILABLE", output.getvalue())
 
     def test_cli_requires_explicit_reset_confirmation(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:

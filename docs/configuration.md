@@ -37,9 +37,15 @@ The panorama fallback threshold is configurable:
 ```toml
 [metadata]
 panorama_aspect_ratio_threshold = 2.0
+batch_size = 100
+timeout_seconds = 60
+exiftool_command = "exiftool"
+ffprobe_command = "ffprobe"
 ```
 
 It represents the longer normalized display dimension divided by the shorter dimension and must be greater than 1.0. Authoritative panorama metadata takes precedence over this geometric fallback.
+
+The batch size controls SQLite commit frequency during extraction. The timeout applies independently to each external-tool invocation. Commands may be executable names available on `PATH` or explicit executable paths. The application never installs external tools implicitly.
 
 ## Scan Settings
 
