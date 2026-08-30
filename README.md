@@ -69,6 +69,10 @@ For a core-only setup without development or local-review dependencies:
 
 The bootstrap only invokes `apt-get` when `--install-system-dependencies` is explicitly supplied.
 
+## Start Here
+
+Read the [User Guide](docs/user-guide.md) before processing a personal library. It explains the safe workflow, the purpose of each command, local HTML interfaces, incremental imports, planning, and the explicit WRITE barrier with diagrams and copyable commands.
+
 ## Quick Start
 
 Initialize a disposable test catalog:
