@@ -214,6 +214,7 @@ media hashes calculate
 media hashes list
 media duplicates candidates
 media duplicates exact
+media duplicates report
 ```
 
 Use `media COMMAND --help` for command-specific help.

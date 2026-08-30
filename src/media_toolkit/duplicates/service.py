@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import csv
+import json
 from pathlib import Path
 import sqlite3
 
@@ -264,3 +266,67 @@ def _exact_group(
     return ExactDuplicateGroup(
         digest, immutable_members, preferred[0].media_id, "SOURCE_TYPE"
     )
+
+
+def export_exact_duplicate_report(
+    database: Path,
+    environment: str,
+    library_name: str,
+    media_filter: str,
+    source_type_priority: tuple[str, ...],
+    output: Path,
+    report_format: str,
+) -> int:
+    """Write an exclusive external CSV or JSON review report for exact groups."""
+    require_database(database, environment)
+    destination = output.expanduser().resolve()
+    with open_database(database) as connection:
+        library_id = _library_id(connection, environment, library_name)
+        roots = connection.execute(
+            """
+            SELECT DISTINCT root_path_snapshot
+            FROM scan
+            WHERE library_id = ?
+            """,
+            (library_id,),
+        ).fetchall()
+    for row in roots:
+        root = Path(row["root_path_snapshot"]).expanduser().resolve()
+        if destination == root or destination.is_relative_to(root):
+            raise CatalogError("Duplicate reports must remain outside all media roots.")
+    if destination.exists():
+        raise CatalogError(f"Duplicate report already exists: {destination}")
+    groups = list_exact_duplicates(
+        database, environment, library_name, media_filter, source_type_priority
+    )
+    rows = [
+        {
+            "sha256": group.sha256,
+            "size_bytes": member.size_bytes,
+            "source_name": member.source_name,
+            "source_type": member.source_type,
+            "relative_path": member.relative_path,
+            "media_type": member.media_type,
+            "media_id": member.media_id,
+            "preferred": member.media_id == group.preferred_media_id,
+            "preference_status": group.preference_status,
+        }
+        for group in groups
+        for member in group.members
+    ]
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    if report_format == "csv":
+        with destination.open("x", newline="", encoding="utf-8") as handle:
+            writer = csv.DictWriter(handle, fieldnames=tuple(rows[0]) if rows else (
+                "sha256", "size_bytes", "source_name", "source_type", "relative_path",
+                "media_type", "media_id", "preferred", "preference_status",
+            ))
+            writer.writeheader()
+            writer.writerows(rows)
+    elif report_format == "json":
+        with destination.open("x", encoding="utf-8") as handle:
+            json.dump(rows, handle, ensure_ascii=False, indent=2)
+            handle.write("\n")
+    else:
+        raise CatalogError(f"Unsupported duplicate report format: {report_format}.")
+    return len(rows)

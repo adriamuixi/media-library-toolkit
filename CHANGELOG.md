@@ -63,6 +63,7 @@ The project intends to follow Semantic Versioning once stable public releases be
 - Added media duplicates candidates to list same-size files as non-authoritative exact-duplicate candidates.
 - Added media duplicates exact to list present exact-content groups by current SHA-256.
 - Added optional source-type priority recommendations for exact duplicate groups, with conservative tie handling.
+- Added exclusive external CSV and JSON exports for exact-duplicate review reports.
 - Designed a staged V1 Local Media Browser for the organized library.
 - Selected an optional Flask, server-rendered HTML, CSS, and vanilla JavaScript architecture.
 - Defined loopback-only serving, media-ID path resolution, external thumbnail caching, and unconditional `toAnalyze` exclusion.

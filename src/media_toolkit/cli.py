@@ -31,7 +31,11 @@ from media_toolkit.dates.service import (
     list_date_resolutions,
     run_date_resolution,
 )
-from media_toolkit.duplicates.service import list_exact_duplicates, list_size_candidates
+from media_toolkit.duplicates.service import (
+    export_exact_duplicate_report,
+    list_exact_duplicates,
+    list_size_candidates,
+)
 from media_toolkit.errors import MediaToolkitError
 from media_toolkit.hashing.service import HashRequest, list_hashes, run_hashing
 from media_toolkit.logging_config import configure_logging
@@ -375,6 +379,22 @@ def build_parser() -> argparse.ArgumentParser:
         help="Restrict groups to photos, videos, or all inventoried files.",
     )
     duplicates_exact_parser.set_defaults(handler=_handle_duplicates_exact)
+    duplicates_report_parser = duplicates_commands.add_parser(
+        "report", help="Write an external CSV or JSON exact-duplicate review report."
+    )
+    duplicates_report_parser.add_argument(
+        "--library", required=True, help="Name of the existing logical library."
+    )
+    duplicates_report_parser.add_argument(
+        "--output", required=True, type=Path, help="New external report path."
+    )
+    duplicates_report_parser.add_argument(
+        "--format", choices=("csv", "json"), default="csv", dest="report_format"
+    )
+    duplicates_report_parser.add_argument(
+        "--media-type", choices=("photos", "videos", "all"), default="all"
+    )
+    duplicates_report_parser.set_defaults(handler=_handle_duplicates_report)
     return parser
 
 
@@ -776,6 +796,22 @@ def _handle_duplicates_exact(args: argparse.Namespace, config: AppConfig) -> int
                 f"{member.source_type}\t{member.relative_path}\t{member.media_type}\t"
                 f"{preference}"
             )
+    return 0
+
+
+def _handle_duplicates_report(args: argparse.Namespace, config: AppConfig) -> int:
+    profile = config.profile(args.profile)
+    count = export_exact_duplicate_report(
+        profile.database,
+        profile.environment,
+        args.library,
+        args.media_type,
+        config.duplicate_source_type_priority,
+        args.output,
+        args.report_format,
+    )
+    print(f"Exact duplicate report rows: {count}")
+    print(f"Report: {args.output.expanduser().resolve()}")
     return 0
 
 

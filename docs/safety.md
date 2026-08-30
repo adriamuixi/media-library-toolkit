@@ -34,6 +34,8 @@ Future copy and move strategies must use immutable plans, source preconditions, 
 
 The operation compares filesystem size and modification time with the completed inventory before it reads a file, then validates the same values after hashing. A mismatch discards the digest, records an immutable error attempt, and requires a new scan. Hashing failures are isolated per file so one unreadable file cannot silently omit the rest of the source.
 
+Duplicate review exports are limited to CSV and JSON catalog reports. The destination must be outside every root recorded for the selected library and must not already exist. Exports list evidence and recommendations only; they never perform physical cleanup.
+
 Before any WRITE operation moves or renames media, it must verify that immutable provenance exists, including the original relative path, source, and import batch. The operation must append a journal record and a current-location transition. It must not replace or delete the only historical reference to an origin.
 
 Production WRITE remains out of scope until a consistent SQLite backup command and open-format provenance export have been implemented and tested.

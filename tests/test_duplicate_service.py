@@ -7,6 +7,7 @@ from media_toolkit.catalog.repositories import register_library, register_source
 from media_toolkit.duplicates.service import (
     ExactDuplicateMember,
     _exact_group,
+    export_exact_duplicate_report,
     list_exact_duplicates,
     list_size_candidates,
 )
@@ -91,6 +92,35 @@ class DuplicateServiceTests(unittest.TestCase):
 
         self.assertEqual(group.preferred_media_id, "master")
         self.assertEqual(group.preference_status, "SOURCE_TYPE")
+
+    def test_export_writes_external_csv_and_refuses_media_root(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            base = Path(temporary_directory)
+            root, database, generated = self._setup(base)
+            run_hashing(
+                HashRequest(
+                    database, "TEST", "Personal Media", "Synthetic", root, "all",
+                    10, 1024, generated,
+                )
+            )
+            report = base / "reports" / "duplicates.csv"
+
+            count = export_exact_duplicate_report(
+                database, "TEST", "Personal Media", "all", (), report, "csv"
+            )
+
+            self.assertEqual(count, 2)
+            self.assertIn("sha256", report.read_text(encoding="utf-8"))
+            with self.assertRaises(Exception):
+                export_exact_duplicate_report(
+                    database,
+                    "TEST",
+                    "Personal Media",
+                    "all",
+                    (),
+                    root / "unsafe.csv",
+                    "csv",
+                )
 
 
 if __name__ == "__main__":

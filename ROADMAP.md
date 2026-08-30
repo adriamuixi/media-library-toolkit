@@ -46,7 +46,7 @@
 - [x] Streaming SHA-256
 - [x] Exact duplicate groups
 - [x] Configurable preferred-source ranking
-- [ ] Review reports
+- [x] Review reports
 
 ## V1.5 — Immutable Provenance
 
