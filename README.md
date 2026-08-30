@@ -235,6 +235,7 @@ media plan create --library LIBRARY
 media plan list --id PLAN_ID
 media plan export --id PLAN_ID --output PATH
 media review --library LIBRARY --root MEDIA_ROOT --port 8080
+media operations copy --plan PLAN_ID --source-root SOURCE --destination-root DESTINATION --confirm-write PLAN_ID
 ```
 
 Use `media COMMAND --help` for command-specific help.

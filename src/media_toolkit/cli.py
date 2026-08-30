@@ -474,6 +474,21 @@ def build_parser() -> argparse.ArgumentParser:
         "--root", type=Path, help="Optional media root for safe cached photo previews."
     )
     review_parser.set_defaults(handler=_handle_review)
+
+    operations_parser = commands.add_parser(
+        "operations", help="Apply explicitly confirmed controlled media operations."
+    )
+    operations_commands = operations_parser.add_subparsers(
+        dest="operations_command", required=True
+    )
+    copy_parser = operations_commands.add_parser(
+        "copy", help="Copy one clean organization plan with SHA-256 verification."
+    )
+    copy_parser.add_argument("--plan", required=True, dest="plan_id")
+    copy_parser.add_argument("--source-root", required=True, type=Path)
+    copy_parser.add_argument("--destination-root", required=True, type=Path)
+    copy_parser.add_argument("--confirm-write", required=True)
+    copy_parser.set_defaults(handler=_handle_operations_copy)
     return parser
 
 
@@ -995,6 +1010,24 @@ def _handle_review(args: argparse.Namespace, config: AppConfig) -> int:
     return 0
 
 
+def _handle_operations_copy(args: argparse.Namespace, config: AppConfig) -> int:
+    if not config.require_write_confirmation:
+        raise MediaToolkitError("WRITE confirmation is required by project safety policy.")
+    from media_toolkit.operations.write import apply_copy_plan
+
+    profile = config.profile(args.profile)
+    operation_id = apply_copy_plan(
+        profile.database,
+        profile.environment,
+        args.plan_id,
+        args.source_root,
+        args.destination_root,
+        args.confirm_write,
+    )
+    print(f"Controlled COPY completed: {operation_id}")
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the CLI and convert expected failures into concise messages."""
     parser = build_parser()
@@ -1014,6 +1047,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             command_name = f"provenance-{args.provenance_command}"
         elif getattr(args, "plan_command", None):
             command_name = f"plan-{args.plan_command}"
+        elif getattr(args, "operations_command", None):
+            command_name = f"operations-{args.operations_command}"
         elif getattr(args, "tools_command", None):
             command_name = f"tools-{args.tools_command}"
         elif getattr(args, "dates_command", None):

@@ -80,11 +80,11 @@
 
 - [x] Immutable checksummed plans
 - [ ] Copy and move strategies
-- [ ] Copy verification with SHA-256
-- [ ] Explicit WRITE confirmation
-- [ ] Operation journal
-- [ ] Post-operation validation
-- [ ] No-overwrite guarantee
+- [x] Copy verification with SHA-256
+- [x] Explicit WRITE confirmation
+- [x] Operation journal
+- [x] Post-operation validation
+- [x] No-overwrite guarantee
 
 ## V1.9 — Local Media Browser
 
