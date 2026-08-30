@@ -25,6 +25,67 @@ class PlanSummary:
     checksum: str
 
 
+@dataclass(frozen=True)
+class _AssociationGroup:
+    """One active, unambiguous association component for planning."""
+
+    key: str
+    media_ids: frozenset[str]
+    anchor_media_id: str
+
+
+def _association_groups(connection, library_id: str) -> tuple[dict[tuple[str, str], _AssociationGroup], set[tuple[str, str]]]:
+    """Return active detected groups and media blocked by active association conflicts."""
+    rows = connection.execute(
+        """
+        SELECT source_id, primary_media_id, companion_media_id, status
+        FROM media_relation
+        WHERE library_id = ? AND active = 1
+        ORDER BY source_id, relation_key, primary_media_id, companion_media_id
+        """,
+        (library_id,),
+    ).fetchall()
+    blocked: set[tuple[str, str]] = set()
+    adjacency: dict[tuple[str, str], set[str]] = {}
+    anchors: dict[tuple[str, str], set[str]] = {}
+    for row in rows:
+        source_id = row["source_id"]
+        primary = row["primary_media_id"]
+        companion = row["companion_media_id"]
+        if row["status"] == "CONFLICT":
+            blocked.update(((source_id, primary), (source_id, companion)))
+            continue
+        primary_key = (source_id, primary)
+        companion_key = (source_id, companion)
+        adjacency.setdefault(primary_key, set()).add(companion)
+        adjacency.setdefault(companion_key, set()).add(primary)
+        anchors.setdefault(primary_key, set()).add(primary)
+    groups: dict[tuple[str, str], _AssociationGroup] = {}
+    visited: set[tuple[str, str]] = set()
+    for start in sorted(adjacency):
+        if start in visited:
+            continue
+        source_id = start[0]
+        pending = [start]
+        members: set[str] = set()
+        component_anchors: set[str] = set()
+        while pending:
+            current = pending.pop()
+            if current in visited:
+                continue
+            visited.add(current)
+            members.add(current[1])
+            component_anchors.update(anchors.get(current, set()))
+            pending.extend((source_id, item) for item in adjacency[current] if (source_id, item) not in visited)
+        ordered_members = sorted(members)
+        key = sha256(f"{source_id}:{','.join(ordered_members)}".encode()).hexdigest()
+        anchor = sorted(component_anchors or members)[0]
+        group = _AssociationGroup(key, frozenset(members), anchor)
+        for media_id in members:
+            groups[(source_id, media_id)] = group
+    return groups, blocked
+
+
 def create_year_or_no_date_plan(
     database: Path, environment: str, library_name: str
 ) -> PlanSummary:
@@ -39,7 +100,7 @@ def create_year_or_no_date_plan(
             raise CatalogError(f"Library '{library_name}' does not exist in the selected profile.")
         rows = connection.execute(
             """
-            SELECT o.observation_id, o.media_id, o.original_filename,
+            SELECT o.observation_id, o.media_id, o.original_filename, o.source_id,
                    attempt.status AS date_status, attempt.effective_capture_local
             FROM file_observation AS o
             JOIN source AS s ON s.source_id = o.source_id
@@ -51,21 +112,44 @@ def create_year_or_no_date_plan(
             """,
             (library["library_id"],),
         ).fetchall()
-        proposed = []
-        for row in rows:
-            year = (
+        association_groups, association_blocked = _association_groups(
+            connection, library["library_id"]
+        )
+        years_by_media = {
+            (row["source_id"], row["media_id"]): (
                 str(row["effective_capture_local"])[:4]
                 if row["date_status"] == "RESOLVED" and row["effective_capture_local"]
                 else "no_date"
             )
-            proposed.append((row, f"{year}/{row['original_filename']}"))
+            for row in rows
+        }
+        proposed: list[tuple[object, str, str | None, str | None]] = []
+        for row in rows:
+            media_key = (row["source_id"], row["media_id"])
+            group = association_groups.get(media_key)
+            year = years_by_media.get(
+                (row["source_id"], group.anchor_media_id) if group else media_key,
+                "no_date",
+            )
+            blocked_reason = "ASSOCIATION_CONFLICT" if media_key in association_blocked else None
+            proposed.append((
+                row, f"{year}/{row['original_filename']}",
+                group.key if group else None, blocked_reason,
+            ))
         destinations = {}
-        for row, destination in proposed:
+        for row, destination, _, _ in proposed:
             destinations.setdefault(destination, []).append(row["observation_id"])
-        payload = [(row["observation_id"], destination) for row, destination in proposed]
+        payload = [
+            (row["observation_id"], destination, group_key, blocked_reason)
+            for row, destination, group_key, blocked_reason in proposed
+        ]
         checksum = sha256(json.dumps(payload, separators=(",", ":")).encode()).hexdigest()
         plan_id = str(uuid4())
-        conflicts = sum(len(ids) for ids in destinations.values() if len(ids) > 1)
+        conflicts = sum(
+            1
+            for row, destination, _, blocked_reason in proposed
+            if len(destinations[destination]) > 1 or blocked_reason
+        )
         status = "REVIEW_REQUIRED" if conflicts else "DRAFT"
         connection.execute(
             """
@@ -75,19 +159,22 @@ def create_year_or_no_date_plan(
             """,
             (plan_id, library["library_id"], status, checksum, datetime.now(UTC).isoformat(), __version__),
         )
-        for row, destination in proposed:
-            conflict = len(destinations[destination]) > 1
+        for row, destination, group_key, blocked_reason in proposed:
+            collision = len(destinations[destination]) > 1
+            reason = ";".join(
+                part for part in (blocked_reason, "DESTINATION_COLLISION" if collision else None) if part
+            ) or None
+            item_status = "BLOCKED" if blocked_reason else "CONFLICT" if collision else "PROPOSED"
             connection.execute(
                 """
                 INSERT INTO organization_plan_item (
                     plan_item_id, plan_id, observation_id, media_id,
-                    destination_relative_path, status, reason
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    destination_relative_path, association_group_key, status, reason
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     str(uuid4()), plan_id, row["observation_id"], row["media_id"], destination,
-                    "CONFLICT" if conflict else "PROPOSED",
-                    "DESTINATION_COLLISION" if conflict else None,
+                    group_key, item_status, reason,
                 ),
             )
     return PlanSummary(plan_id, status, len(proposed), conflicts, checksum)

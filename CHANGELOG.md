@@ -10,6 +10,8 @@ The project intends to follow Semantic Versioning once stable public releases be
 
 - Added deterministic read-only year-or-no-date organization plans with checksums and explicit destination-conflict records.
 
+- Added association-aware organization planning that keeps detected related files in one planned year directory.
+
 - Added mandatory provenance validation for all future WRITE plans.
 
 - Added append-only current-location history for every historical observation.
