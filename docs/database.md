@@ -47,6 +47,8 @@ Hashing streams bounded chunks from a validated cataloged path. A cached success
 
 The current hash does not yet create a logical `media_item` or collapse inventory paths. The next duplicate-grouping stage will use equal SHA-256 values as exact-content evidence while retaining every physical observation for the later provenance migration.
 
+Same-size candidate generation is a read-only catalog query. It groups only present files in one library that share a byte size and is intentionally non-authoritative: equal size is a performance filter, not duplicate evidence. SHA-256 equality is required before later duplicate grouping can call content exact.
+
 ## Planned Provenance Tables
 
 The V1 provenance migration will introduce or evolve records for:

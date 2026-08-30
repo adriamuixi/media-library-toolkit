@@ -210,6 +210,7 @@ media associations detect
 media associations list
 media hashes calculate
 media hashes list
+media duplicates candidates
 ```
 
 Use `media COMMAND --help` for command-specific help.

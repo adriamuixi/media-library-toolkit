@@ -31,6 +31,7 @@ from media_toolkit.dates.service import (
     list_date_resolutions,
     run_date_resolution,
 )
+from media_toolkit.duplicates.service import list_size_candidates
 from media_toolkit.errors import MediaToolkitError
 from media_toolkit.hashing.service import HashRequest, list_hashes, run_hashing
 from media_toolkit.logging_config import configure_logging
@@ -339,6 +340,27 @@ def build_parser() -> argparse.ArgumentParser:
         "--source", required=True, dest="source_name", help="Name of the registered source."
     )
     hashes_list_parser.set_defaults(handler=_handle_hashes_list)
+
+    duplicates_parser = commands.add_parser(
+        "duplicates", help="Inspect read-only exact-duplicate evidence."
+    )
+    duplicates_commands = duplicates_parser.add_subparsers(
+        dest="duplicates_command", required=True
+    )
+    duplicates_candidates_parser = duplicates_commands.add_parser(
+        "candidates",
+        help="List same-size candidates; equal size is not a duplicate decision.",
+    )
+    duplicates_candidates_parser.add_argument(
+        "--library", required=True, help="Name of the existing logical library."
+    )
+    duplicates_candidates_parser.add_argument(
+        "--media-type",
+        choices=("photos", "videos", "all"),
+        default="all",
+        help="Restrict candidates to photos, videos, or all inventoried files.",
+    )
+    duplicates_candidates_parser.set_defaults(handler=_handle_duplicates_candidates)
     return parser
 
 
@@ -687,6 +709,31 @@ def _handle_hashes_list(args: argparse.Namespace, config: AppConfig) -> int:
     return 0
 
 
+def _handle_duplicates_candidates(args: argparse.Namespace, config: AppConfig) -> int:
+    profile = config.profile(args.profile)
+    groups = list_size_candidates(
+        profile.database,
+        profile.environment,
+        args.library,
+        args.media_type,
+    )
+    if not groups:
+        print("No same-size candidates found.")
+        return 0
+    candidate_count = sum(len(group.members) for group in groups)
+    print(f"Candidate groups: {len(groups)}")
+    print(f"Candidate files: {candidate_count}")
+    print("SIZE_BYTES\tSOURCE\tPATH\tTYPE\tSHA256")
+    for group in groups:
+        for member in group.members:
+            digest = member.sha256 or "NOT_CALCULATED"
+            print(
+                f"{group.size_bytes}\t{member.source_name}\t{member.relative_path}\t"
+                f"{member.media_type}\t{digest}"
+            )
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the CLI and convert expected failures into concise messages."""
     parser = build_parser()
@@ -708,6 +755,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             command_name = f"associations-{args.associations_command}"
         elif getattr(args, "hashes_command", None):
             command_name = f"hashes-{args.hashes_command}"
+        elif getattr(args, "duplicates_command", None):
+            command_name = f"duplicates-{args.duplicates_command}"
         if args.command in {"scan", "metadata"} or (
             args.command == "hashes" and args.hashes_command == "calculate"
         ):

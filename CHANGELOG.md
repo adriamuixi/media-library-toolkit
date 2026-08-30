@@ -60,6 +60,7 @@ The project intends to follow Semantic Versioning once stable public releases be
 - Added hash caching by cataloged size and modification-time signature, with opt-in forced recalculation.
 - Added per-file hash safety checks before and after reads without media mutation.
 - Added `media hashes list` for deterministic current-hash inspection.
+- Added media duplicates candidates to list same-size files as non-authoritative exact-duplicate candidates.
 - Designed a staged V1 Local Media Browser for the organized library.
 - Selected an optional Flask, server-rendered HTML, CSS, and vanilla JavaScript architecture.
 - Defined loopback-only serving, media-ID path resolution, external thumbnail caching, and unconditional `toAnalyze` exclusion.
