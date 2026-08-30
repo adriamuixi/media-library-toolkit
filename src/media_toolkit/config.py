@@ -34,6 +34,7 @@ class AppConfig:
     default_media_mode: str
     require_write_confirmation: bool
     panorama_aspect_ratio_threshold: float
+    panorama_min_width_px: int
     metadata_batch_size: int
     metadata_timeout_seconds: int
     exiftool_command: str
@@ -85,7 +86,8 @@ DEFAULTS: dict[str, Any] = {
         "require_write_confirmation": True,
     },
     "metadata": {
-        "panorama_aspect_ratio_threshold": 2.0,
+        "panorama_aspect_ratio_threshold": 4.0,
+        "panorama_min_width_px": 2000,
         "batch_size": 100,
         "timeout_seconds": 60,
         "exiftool_command": "exiftool",
@@ -175,6 +177,9 @@ def load_config(
         raise ConfigurationError(
             "The panorama aspect-ratio threshold must be greater than 1.0."
         )
+    panorama_min_width_px = int(metadata["panorama_min_width_px"])
+    if panorama_min_width_px < 1:
+        raise ConfigurationError("The panorama minimum width must be at least 1 pixel.")
 
     metadata_batch_size = int(metadata["batch_size"])
     if metadata_batch_size < 1:
@@ -235,6 +240,7 @@ def load_config(
         default_media_mode=default_media_mode,
         require_write_confirmation=bool(safety["require_write_confirmation"]),
         panorama_aspect_ratio_threshold=panorama_threshold,
+        panorama_min_width_px=panorama_min_width_px,
         metadata_batch_size=metadata_batch_size,
         metadata_timeout_seconds=metadata_timeout_seconds,
         exiftool_command=exiftool_command,

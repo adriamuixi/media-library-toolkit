@@ -800,11 +800,13 @@ def _handle_tools_check(args: argparse.Namespace, config: AppConfig) -> int:
             config.exiftool_command,
             config.metadata_timeout_seconds,
             config.panorama_aspect_ratio_threshold,
+            config.panorama_min_width_px,
         ),
         FfprobeAdapter(
             config.ffprobe_command,
             config.metadata_timeout_seconds,
             config.panorama_aspect_ratio_threshold,
+            config.panorama_min_width_px,
         ),
     )
     unavailable = False
@@ -832,6 +834,7 @@ def _handle_metadata(args: argparse.Namespace, config: AppConfig) -> int:
             batch_size=config.metadata_batch_size,
             generated_paths=_generated_paths(config, args.profile),
             panorama_threshold=config.panorama_aspect_ratio_threshold,
+            panorama_min_width_px=config.panorama_min_width_px,
             timeout_seconds=config.metadata_timeout_seconds,
             exiftool_command=config.exiftool_command,
             ffprobe_command=config.ffprobe_command,

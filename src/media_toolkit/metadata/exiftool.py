@@ -41,10 +41,17 @@ class ExifToolAdapter:
 
     extractor_name = "EXIFTOOL"
 
-    def __init__(self, command: str, timeout_seconds: int, panorama_threshold: float):
+    def __init__(
+        self,
+        command: str,
+        timeout_seconds: int,
+        panorama_threshold: float,
+        panorama_min_width_px: int,
+    ):
         self.command = command
         self.timeout_seconds = timeout_seconds
         self.panorama_threshold = panorama_threshold
+        self.panorama_min_width_px = panorama_min_width_px
 
     def status(self) -> ToolStatus:
         """Inspect ExifTool availability and version."""
@@ -84,7 +91,12 @@ class ExifToolAdapter:
         projection = values.get("projectiontype") or values.get("usepanoramaviewer")
         projection_text = str(projection) if projection is not None else None
         geometry = derive_geometry(
-            width, height, rotation, projection_text, self.panorama_threshold
+            width,
+            height,
+            rotation,
+            projection_text,
+            self.panorama_threshold,
+            self.panorama_min_width_px,
         )
         normalized = NormalizedMetadata(
             stored_width_px=width,

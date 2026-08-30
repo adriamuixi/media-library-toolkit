@@ -6,6 +6,12 @@ The project intends to follow Semantic Versioning once stable public releases be
 
 ## [Unreleased]
 
+### Changed
+
+- Changed panorama classification to require a minimum 2,000 px orientation-normalized display width and changed the default geometric threshold from 2:1 to an inclusive 4:1. Authoritative projection metadata takes precedence only after the width requirement is met.
+
+- Refactored Local Media Browser detail pages to display complete catalog-backed identity, location, technical metadata, date, hash, provenance, association, extraction-evidence, and review-decision records in readable sections.
+
 ### Added
 
 - Added incremental import-batch summaries and immutable completion verification, including full historical SHA-256 duplicate evidence.

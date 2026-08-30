@@ -12,7 +12,7 @@ class MetadataAdapterTests(unittest.TestCase):
     def test_exiftool_normalizes_photo_geometry_and_camera_fields(self) -> None:
         output = """[{"EXIF:ImageWidth":4000,"EXIF:ImageHeight":3000,"EXIF:Orientation":6,"EXIF:Make":"Example","EXIF:Model":"Camera","EXIF:ISO":200}]"""
         completed = subprocess.CompletedProcess([], 0, output, "")
-        adapter = ExifToolAdapter("exiftool", 10, 2.0)
+        adapter = ExifToolAdapter("exiftool", 10, 4.0, 2000)
         status = ToolStatus("ExifTool", "/tools/exiftool", True, "13.0", None)
 
         with patch("media_toolkit.metadata.exiftool.subprocess.run", return_value=completed):
@@ -27,7 +27,7 @@ class MetadataAdapterTests(unittest.TestCase):
     def test_ffprobe_normalizes_duration_streams_and_rotation(self) -> None:
         output = """{"streams":[{"codec_type":"video","codec_name":"hevc","width":3840,"height":2160,"avg_frame_rate":"30000/1001","r_frame_rate":"30000/1001","tags":{"rotate":"90"},"color_transfer":"smpte2084"},{"codec_type":"audio","codec_name":"aac","sample_rate":"48000","channels":2}],"format":{"format_name":"mov,mp4","duration":"12.345","bit_rate":"9000000"}}"""
         completed = subprocess.CompletedProcess([], 0, output, "")
-        adapter = FfprobeAdapter("ffprobe", 10, 2.0)
+        adapter = FfprobeAdapter("ffprobe", 10, 4.0, 2000)
         status = ToolStatus("ffprobe", "/tools/ffprobe", True, "7.0", None)
 
         with patch("media_toolkit.metadata.ffprobe.subprocess.run", return_value=completed):

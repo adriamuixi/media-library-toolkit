@@ -41,6 +41,7 @@ class MetadataRequest:
     batch_size: int
     generated_paths: tuple[Path, ...]
     panorama_threshold: float
+    panorama_min_width_px: int
     timeout_seconds: int
     exiftool_command: str
     ffprobe_command: str
@@ -64,11 +65,13 @@ def configured_adapters(request: MetadataRequest) -> dict[str, MetadataAdapter]:
             request.exiftool_command,
             request.timeout_seconds,
             request.panorama_threshold,
+            request.panorama_min_width_px,
         ),
         "VIDEO": FfprobeAdapter(
             request.ffprobe_command,
             request.timeout_seconds,
             request.panorama_threshold,
+            request.panorama_min_width_px,
         ),
     }
 
@@ -122,6 +125,7 @@ def _signature(request: MetadataRequest, extractor: str) -> str:
         {
             "extractor": extractor,
             "panorama_aspect_ratio_threshold": request.panorama_threshold,
+            "panorama_min_width_px": request.panorama_min_width_px,
             "parser_version": PARSER_VERSION,
         },
         sort_keys=True,

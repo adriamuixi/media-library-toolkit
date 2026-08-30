@@ -24,6 +24,7 @@ def derive_geometry(
     rotation_degrees: int | None,
     projection_type: str | None,
     panorama_threshold: float,
+    panorama_min_width_px: int,
 ) -> Geometry:
     """Derive query fields without inventing missing dimensions."""
     if not width_px or not height_px or width_px < 1 or height_px < 1:
@@ -48,7 +49,10 @@ def derive_geometry(
         marker in projection
         for marker in ("equirectangular", "spherical", "cylindrical", "panorama")
     )
-    if authoritative_panorama:
+    if display_width < panorama_min_width_px:
+        is_panorama = False
+        panorama_reason = "BELOW_MINIMUM_WIDTH"
+    elif authoritative_panorama:
         is_panorama = True
         panorama_reason = "PROJECTION_METADATA"
     elif aspect_ratio >= panorama_threshold:

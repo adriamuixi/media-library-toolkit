@@ -66,7 +66,7 @@ class MetadataServiceTests(unittest.TestCase):
     ) -> MetadataRequest:
         return MetadataRequest(
             database, "TEST", "Personal Media", "Synthetic", root, "all", 1,
-            generated, 2.0, 10, "exiftool", "ffprobe", force,
+            generated, 4.0, 2000, 10, "exiftool", "ffprobe", force,
         )
 
     def _adapters(self) -> dict[str, FakeAdapter]:

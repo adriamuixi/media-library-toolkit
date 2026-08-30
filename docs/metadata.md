@@ -24,16 +24,18 @@ Dimensions must respect metadata orientation. A photograph stored as 4032 by 302
 
 Classification uses two levels of evidence:
 
-1. Authoritative panorama or projection metadata produces `is_panorama = true` and records the metadata source.
-2. When authoritative metadata is absent, a configurable aspect-ratio threshold may classify an image as panoramic.
+1. The orientation-normalized display width must meet the configured minimum width.
+2. Authoritative panorama or projection metadata produces `is_panorama = true` and records the metadata source when the width requirement is met.
+3. When authoritative metadata is absent, a configurable aspect-ratio threshold may classify an image as panoramic when the width requirement is met.
 
-The default ratio threshold is `2.0`, evaluated as the longer display dimension divided by the shorter display dimension. This supports both horizontal and vertical panoramas.
+The default ratio threshold is `4.0`, evaluated as the longer display dimension divided by the shorter display dimension. A ratio of exactly 4:1 qualifies. The default minimum display width is `2000` pixels. The ratio rule supports both horizontal and vertical shapes, while the width requirement always applies to the orientation-normalized display width.
 
 Example reasons include:
 
 ```text
 PROJECTION_METADATA
 ASPECT_RATIO_THRESHOLD
+BELOW_MINIMUM_WIDTH
 MANUAL_REVIEW
 NOT_PANORAMIC
 UNKNOWN_DIMENSIONS

@@ -70,7 +70,7 @@ The implementation uses deterministic pages of 60 entries. Its filter shape has 
 
 ## Detail View
 
-The detail page has a large preview and a structured information panel. It shows:
+The detail page has a large preview, a compact summary, and structured catalog sections. Current records are expanded by default; potentially large immutable histories remain available in collapsible sections. It shows every stored field from:
 
 - current and original filenames and relative paths;
 - extension, size, and SHA-256;
@@ -81,6 +81,14 @@ The detail page has a large preview and a structured information panel. It shows
 - exact duplicate observations and historical paths;
 - active Live Photo, RAW/JPEG, and sidecar relations;
 - useful catalog processing state.
+- media identity and every current file-location record;
+- current and historical date resolutions, including candidate and reason JSON;
+- current and historical hash attempts;
+- all normalized technical metadata fields;
+- immutable provenance and location-transition history;
+- active and inactive media associations;
+- metadata extraction history, including raw extractor JSON and errors;
+- immutable manual review decisions.
 
 Previous and next links retain the active filter, search, and sort state. Left and right arrow keys navigate when focus is not inside an input; Escape returns to the gallery.
 
@@ -148,6 +156,7 @@ A missing original remains in gallery and detail queries using catalog metadata,
 - month, source, media-type, and extension filters;
 - provenance search;
 - technical and immutable historical detail;
+- complete per-media catalog records and raw extraction evidence;
 - stable sorting and filtered previous/next navigation.
 
 ### Browser V1.1

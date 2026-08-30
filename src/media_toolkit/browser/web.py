@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from hashlib import sha256
+import json
 from pathlib import Path
 import shutil
 import subprocess
@@ -103,8 +104,7 @@ def create_browser_app(
             available=available,
             previous=_neighbor(entries, entry.media_id, -1),
             next_item=_neighbor(entries, entry.media_id, 1),
-            provenance=_provenance_rows(database, library_id, media_id),
-            metadata=_metadata_row(database, media_id),
+            detail_sections=_detail_sections(database, library_id, media_id),
             duplicates=_duplicate_rows(database, library_id, media_id),
             return_query=_query_string(filters),
         )
@@ -264,14 +264,176 @@ def _neighbor(entries: list[BrowserMedia], media_id: str, direction: int) -> Bro
     return entries[neighbor_index] if 0 <= neighbor_index < len(entries) else None
 
 
-def _provenance_rows(database: Path, library_id: str, media_id: str):
+def _detail_sections(database: Path, library_id: str, media_id: str) -> list[dict[str, object]]:
+    """Return all catalog-backed media detail as readable, read-only sections."""
+    queries = (
+        (
+            "Media identity",
+            """
+            SELECT mf.*, l.name AS library_name, l.environment AS library_environment,
+                   l.description AS library_description
+            FROM media_file AS mf
+            JOIN library AS l ON l.library_id = mf.library_id
+            WHERE mf.media_id = ? AND mf.library_id = ?
+            """,
+            (media_id, library_id),
+        ),
+        (
+            "Current file locations",
+            """
+            SELECT fl.*, s.name AS source_name, s.source_type, s.default_timezone
+            FROM file_location AS fl
+            JOIN source AS s ON s.source_id = fl.source_id
+            WHERE fl.media_id = ? AND s.library_id = ?
+            ORDER BY fl.normalized_relative_path, fl.location_id
+            """,
+            (media_id, library_id),
+        ),
+        (
+            "Technical metadata",
+            "SELECT * FROM media_metadata WHERE media_id = ?",
+            (media_id,),
+        ),
+        (
+            "Current capture-date resolution",
+            """
+            SELECT a.*, current.updated_at AS current_pointer_updated_at
+            FROM media_date_resolution AS current
+            JOIN date_resolution_attempt AS a ON a.resolution_id = current.resolution_id
+            WHERE current.media_id = ?
+            """,
+            (media_id,),
+        ),
+        (
+            "Capture-date resolution history",
+            """
+            SELECT * FROM date_resolution_attempt
+            WHERE media_id = ? ORDER BY resolved_at DESC, resolution_id DESC
+            """,
+            (media_id,),
+        ),
+        (
+            "Current content hash",
+            """
+            SELECT a.*, current.updated_at AS current_pointer_updated_at,
+                   item.media_item_id AS logical_media_item_id
+            FROM media_hash AS current
+            JOIN hash_attempt AS a ON a.hash_id = current.hash_id
+            LEFT JOIN media_item AS item ON item.sha256 = a.digest
+            WHERE current.media_id = ?
+            """,
+            (media_id,),
+        ),
+        (
+            "Hash calculation history",
+            """
+            SELECT * FROM hash_attempt
+            WHERE media_id = ? ORDER BY finished_at DESC, hash_id DESC
+            """,
+            (media_id,),
+        ),
+        (
+            "Immutable provenance observations",
+            """
+            SELECT o.*, s.name AS source_name, s.source_type, s.default_timezone,
+                   b.name AS import_batch_name, b.description AS import_batch_description,
+                   b.created_at AS import_batch_created_at
+            FROM file_observation AS o
+            JOIN source AS s ON s.source_id = o.source_id
+            JOIN import_batch AS b ON b.import_batch_id = o.import_batch_id
+            WHERE o.media_id = ? AND s.library_id = ?
+            ORDER BY o.observed_at, o.observation_id
+            """,
+            (media_id, library_id),
+        ),
+        (
+            "Observation location history",
+            """
+            SELECT h.*, o.original_relative_path, s.name AS source_name
+            FROM observation_location_history AS h
+            JOIN file_observation AS o ON o.observation_id = h.observation_id
+            JOIN source AS s ON s.source_id = o.source_id
+            WHERE o.media_id = ? AND s.library_id = ?
+            ORDER BY h.recorded_at DESC, h.observation_location_id DESC
+            """,
+            (media_id, library_id),
+        ),
+        (
+            "Media associations",
+            """
+            SELECT r.*,
+                   CASE WHEN r.primary_media_id = ? THEN 'PRIMARY' ELSE 'COMPANION' END AS media_role,
+                   CASE WHEN r.primary_media_id = ? THEN r.companion_media_id ELSE r.primary_media_id END AS related_media_id,
+                   related.original_filename AS related_original_filename,
+                   s.name AS source_name
+            FROM media_relation AS r
+            JOIN source AS s ON s.source_id = r.source_id
+            JOIN media_file AS related ON related.media_id = CASE
+                WHEN r.primary_media_id = ? THEN r.companion_media_id ELSE r.primary_media_id END
+            WHERE r.library_id = ? AND (r.primary_media_id = ? OR r.companion_media_id = ?)
+            ORDER BY r.active DESC, r.relation_type, r.relation_id
+            """,
+            (media_id, media_id, media_id, library_id, media_id, media_id),
+        ),
+        (
+            "Metadata extraction history and raw evidence",
+            """
+            SELECT * FROM metadata_extraction
+            WHERE media_id = ? ORDER BY extracted_at DESC, extraction_id DESC
+            """,
+            (media_id,),
+        ),
+        (
+            "Manual review decisions",
+            """
+            SELECT * FROM manual_review_decision
+            WHERE media_id = ? ORDER BY decided_at DESC, decision_id DESC
+            """,
+            (media_id,),
+        ),
+    )
+    json_fields = {
+        "arguments_json",
+        "candidates_json",
+        "reasons_json",
+        "details_json",
+        "raw_metadata_json",
+        "decision_value_json",
+    }
+    sections: list[dict[str, object]] = []
     with open_readonly_database(database) as connection:
-        return connection.execute("""SELECT o.original_filename, o.original_relative_path, o.current_relative_path, s.source_type, s.name AS source_name, b.name AS import_batch, o.source_context_raw, o.source_context_normalized FROM file_observation AS o JOIN source AS s ON s.source_id=o.source_id JOIN import_batch AS b ON b.import_batch_id=o.import_batch_id WHERE o.media_id=? AND s.library_id=? ORDER BY o.observed_at, o.observation_id""", (media_id, library_id)).fetchall()
+        for title, sql, parameters in queries:
+            records = []
+            for row in connection.execute(sql, parameters).fetchall():
+                record = dict(row)
+                for key in json_fields.intersection(record):
+                    record[key] = _pretty_json(record[key])
+                records.append(record)
+            sections.append(
+                {
+                    "title": title,
+                    "records": records,
+                    "open": title in {
+                        "Media identity",
+                        "Current file locations",
+                        "Technical metadata",
+                        "Current capture-date resolution",
+                        "Current content hash",
+                        "Immutable provenance observations",
+                    },
+                }
+            )
+    return sections
 
 
-def _metadata_row(database: Path, media_id: str):
-    with open_readonly_database(database) as connection:
-        return connection.execute("SELECT * FROM media_metadata WHERE media_id = ?", (media_id,)).fetchone()
+def _pretty_json(value: object) -> object:
+    """Pretty-print valid stored JSON while preserving malformed historical text."""
+    if not isinstance(value, str):
+        return value
+    try:
+        return json.dumps(json.loads(value), indent=2, ensure_ascii=False, sort_keys=True)
+    except (TypeError, ValueError):
+        return value
 
 
 def _duplicate_rows(database: Path, library_id: str, media_id: str):
@@ -375,7 +537,9 @@ _STYLE = """
   h1 { margin: 7px 0; font-size: clamp(2rem, 5vw, 3.2rem); letter-spacing: -.05em; } .eyebrow { color: #9ca9ff; font-size: .78rem; font-weight: 750; letter-spacing: .12em; text-transform: uppercase; }
   .lede, .meta { color: #b9c0d3; line-height: 1.55; } .notice { margin: 22px 0; padding: 14px 16px; border-left: 3px solid #7180f4; border-radius: 6px; background: #1a1f31; color: #c7cde0; }
   .filters, .pager { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; margin: 25px 0; }.button { padding: 9px 13px; border: 1px solid #46507b; border-radius: 9px; color: #dce1ff; text-decoration: none; font-weight: 650; }.button:hover, .button.active { background: #293055; border-color: #8896ff; }
-  .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 15px; }.card { display: block; overflow: hidden; border: 1px solid #303653; border-radius: 14px; background: rgba(24, 28, 43, .82); color: #edf0f7; text-decoration: none; }.card:hover { border-color: #8896ff; transform: translateY(-2px); }.thumb { aspect-ratio: 1; width: 100%; object-fit: cover; background: #171b2b; }.placeholder { display: grid; place-items: center; aspect-ratio: 1; padding: 16px; color: #aeb7cb; text-align: center; background: #171b2b; }.caption { padding: 11px; font-size: .86rem; overflow-wrap: anywhere; }.caption strong { display: block; margin-bottom: 5px; }.detail { display: grid; gap: 25px; grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr); margin-top: 28px; }.full { width: 100%; max-height: 75vh; object-fit: contain; background: #080a10; border-radius: 14px; }.panel { border: 1px solid #303653; border-radius: 14px; padding: 20px; background: rgba(24,28,43,.82); }.path { overflow-wrap: anywhere; color: #c7cde0; } @media (max-width: 720px) { main { width: min(100% - 28px, 1280px); padding-top: 30px; }.detail { grid-template-columns: 1fr; } }
+  .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 15px; }.card { display: block; overflow: hidden; border: 1px solid #303653; border-radius: 14px; background: rgba(24, 28, 43, .82); color: #edf0f7; text-decoration: none; }.card:hover { border-color: #8896ff; transform: translateY(-2px); }.thumb { aspect-ratio: 1; width: 100%; object-fit: cover; background: #171b2b; }.placeholder { display: grid; place-items: center; aspect-ratio: 1; padding: 16px; color: #aeb7cb; text-align: center; background: #171b2b; }.caption { padding: 11px; font-size: .86rem; overflow-wrap: anywhere; }.caption strong { display: block; margin-bottom: 5px; }.detail { display: grid; gap: 25px; grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr); margin-top: 28px; }.full { width: 100%; max-height: 75vh; object-fit: contain; background: #080a10; border-radius: 14px; }.panel { border: 1px solid #303653; border-radius: 14px; padding: 20px; background: rgba(24,28,43,.82); }.path { overflow-wrap: anywhere; color: #c7cde0; }
+  .catalog-sections { display: grid; gap: 14px; margin-top: 25px; }.catalog-section { border: 1px solid #303653; border-radius: 14px; background: rgba(24,28,43,.82); overflow: hidden; }.catalog-section summary { cursor: pointer; padding: 17px 20px; font-size: 1.08rem; font-weight: 750; }.catalog-section[open] summary { border-bottom: 1px solid #303653; }.record { padding: 18px 20px; }.record + .record { border-top: 1px solid #303653; }.fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 13px 22px; margin: 0; }.field { min-width: 0; }.field dt { margin-bottom: 4px; color: #99a5c6; font-size: .76rem; font-weight: 750; letter-spacing: .06em; text-transform: uppercase; }.field dd { margin: 0; color: #edf0f7; line-height: 1.42; overflow-wrap: anywhere; white-space: pre-wrap; }.empty { margin: 0; padding: 18px 20px; color: #99a5c6; }.record-count { color: #99a5c6; font-size: .8rem; font-weight: 500; }
+  @media (max-width: 720px) { main { width: min(100% - 28px, 1280px); padding-top: 30px; }.detail { grid-template-columns: 1fr; }.fields { grid-template-columns: 1fr; } }
 </style>
 """
 
@@ -386,5 +550,31 @@ _GALLERY_TEMPLATE = """<!doctype html><title>{{ library_name }} browser</title>"
 """
 
 _DETAIL_TEMPLATE = """<!doctype html><title>{{ entry.current_relative_path }}</title>""" + _STYLE + """
-<main><nav class="pager"><a class="button" href="/?{{ return_query }}">Browser</a><a class="button" href="http://127.0.0.1:8081">Database</a><a class="button" href="http://127.0.0.1:8082">Review</a></nav><a class="button" href="/?{{ return_query }}">Back to gallery</a><div class="eyebrow" style="margin-top:24px">Cataloged media</div><h1>{{ entry.current_relative_path }}</h1><section class="detail"><div>{% if available and entry.media_type == 'PHOTO' %}<img class="full" src="{{ url_for('content', media_id=entry.media_id) }}" alt="{{ entry.current_relative_path }}">{% elif available and entry.media_type == 'VIDEO' %}<video class="full" controls src="{{ url_for('content', media_id=entry.media_id) }}>Preview unavailable in browser.</video>{% else %}<div class="placeholder">The catalog entry remains visible, but its file is unavailable under the selected media root.</div>{% endif %}</div><aside class="panel"><p><strong>Type</strong><br>{{ entry.media_type }}</p><p><strong>Extension and size</strong><br>{{ entry.extension }} · {{ entry.size_bytes }} bytes</p><p><strong>Capture date</strong><br>{{ entry.capture_local or 'No resolved date' }}</p><p><strong>Catalog status</strong><br>{{ entry.status }}</p><p><strong>Current relative path</strong><br><span class="path">{{ entry.current_relative_path }}</span></p>{% if metadata %}<p><strong>Technical metadata</strong><br>{{ metadata['display_width_px'] or '-' }} × {{ metadata['display_height_px'] or '-' }}{% if metadata['duration_ms'] %} · {{ metadata['duration_ms'] }} ms{% endif %}</p>{% endif %}</aside></section><section class="panel"><h2>Immutable provenance</h2>{% for item in provenance %}<p class="path"><strong>{{ item['source_name'] }} · {{ item['import_batch'] }}</strong><br>Original: {{ item['original_relative_path'] }}<br>Current: {{ item['current_relative_path'] }}</p>{% endfor %}</section>{% if duplicates|length > 1 %}<section class="panel"><h2>Exact duplicate observations</h2>{% for item in duplicates %}<p class="path">{{ item['source_name'] }} · {{ item['original_relative_path'] }}</p>{% endfor %}</section>{% endif %}<nav class="pager">{% if previous %}<a id="previous-link" class="button" href="{{ url_for('detail', media_id=previous.media_id) }}?{{ return_query }}">Previous</a>{% endif %}{% if next_item %}<a id="next-link" class="button" href="{{ url_for('detail', media_id=next_item.media_id) }}?{{ return_query }}">Next</a>{% endif %}</nav></main><script>document.addEventListener('keydown', event => { if (event.target.matches('input,select,textarea')) return; if (event.key === 'Escape') location.href='/?{{ return_query }}'; if (event.key === 'ArrowLeft') document.getElementById('previous-link')?.click(); if (event.key === 'ArrowRight') document.getElementById('next-link')?.click(); });</script>
+<main>
+  <nav class="pager"><a class="button" href="/?{{ return_query }}">Browser</a><a class="button" href="http://127.0.0.1:8081">Database</a><a class="button" href="http://127.0.0.1:8082">Review</a></nav>
+  <a class="button" href="/?{{ return_query }}">Back to gallery</a>
+  <div class="eyebrow" style="margin-top:24px">Cataloged media</div>
+  <h1>{{ entry.current_relative_path }}</h1>
+  <section class="detail">
+    <div>{% if available and entry.media_type == 'PHOTO' %}<img class="full" src="{{ url_for('content', media_id=entry.media_id) }}" alt="{{ entry.current_relative_path }}">{% elif available and entry.media_type == 'VIDEO' %}<video class="full" controls src="{{ url_for('content', media_id=entry.media_id) }}">Preview unavailable in browser.</video>{% else %}<div class="placeholder">The catalog entry remains visible, but its file is unavailable under the selected media root.</div>{% endif %}</div>
+    <aside class="panel"><p><strong>Type</strong><br>{{ entry.media_type }}</p><p><strong>Extension and size</strong><br>{{ entry.extension }} · {{ entry.size_bytes }} bytes</p><p><strong>Capture date</strong><br>{{ entry.capture_local or 'No resolved date' }}</p><p><strong>Catalog status</strong><br>{{ entry.status }}</p><p><strong>Current relative path</strong><br><span class="path">{{ entry.current_relative_path }}</span></p><p><strong>Media ID</strong><br><span class="path">{{ entry.media_id }}</span></p></aside>
+  </section>
+  <section class="catalog-sections" aria-label="Complete catalog information">
+    {% for section in detail_sections %}
+      <details class="catalog-section"{% if section['open'] %} open{% endif %}>
+        <summary>{{ section['title'] }} <span class="record-count">{{ section['records']|length }} record{% if section['records']|length != 1 %}s{% endif %}</span></summary>
+        {% if section['records'] %}
+          {% for record in section['records'] %}
+            <article class="record"><dl class="fields">
+              {% for key, value in record.items() %}<div class="field"><dt>{{ key|replace('_', ' ') }}</dt><dd>{% if value is none %}Not recorded{% elif value == '' %}Empty{% else %}{{ value }}{% endif %}</dd></div>{% endfor %}
+            </dl></article>
+          {% endfor %}
+        {% else %}<p class="empty">No catalog record is available for this section.</p>{% endif %}
+      </details>
+    {% endfor %}
+  </section>
+  {% if duplicates|length > 1 %}<section class="panel" style="margin-top:25px"><h2>Exact duplicate observations</h2>{% for item in duplicates %}<p class="path">{{ item['source_name'] }} · {{ item['original_relative_path'] }}{% if item['current_relative_path'] != item['original_relative_path'] %}<br>Current: {{ item['current_relative_path'] }}{% endif %}</p>{% endfor %}</section>{% endif %}
+  <nav class="pager">{% if previous %}<a id="previous-link" class="button" href="{{ url_for('detail', media_id=previous.media_id) }}?{{ return_query }}">Previous</a>{% endif %}{% if next_item %}<a id="next-link" class="button" href="{{ url_for('detail', media_id=next_item.media_id) }}?{{ return_query }}">Next</a>{% endif %}</nav>
+</main>
+<script>document.addEventListener('keydown', event => { if (event.target.matches('input,select,textarea')) return; if (event.key === 'Escape') location.href='/?{{ return_query }}'; if (event.key === 'ArrowLeft') document.getElementById('previous-link')?.click(); if (event.key === 'ArrowRight') document.getElementById('next-link')?.click(); });</script>
 """

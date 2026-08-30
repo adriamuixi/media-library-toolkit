@@ -11,7 +11,7 @@ Image dimensions and panoramic shape are useful for catalog searches, reports, r
 
 Store normalized display width and height, file size, derived megapixels, aspect ratio, orientation class, a panorama flag, its classification reason, and authoritative projection metadata when available.
 
-Use authoritative panorama metadata first. Otherwise use a configurable aspect-ratio rule. The initial proposed threshold is 2.0 and applies to horizontal and vertical images.
+Require an orientation-normalized display width of at least 2,000 pixels for every panorama classification. After that requirement is met, use authoritative panorama metadata first; otherwise use a configurable aspect-ratio rule. The default threshold is 4.0, inclusive, and applies to horizontal and vertical image shapes.
 
 ## Consequences
 

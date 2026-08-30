@@ -26,7 +26,7 @@
 - [x] ExifTool adapter for photographs
 - [x] ffprobe adapter for videos
 - [x] Image width, height, megapixels, and aspect ratio
-- [x] Derived orientation and panorama classification
+- [x] Derived orientation and panorama classification with a default inclusive 4:1 threshold and 2,000 px minimum display width
 - [x] Normalized metadata
 - [x] Raw extractor response storage
 - [x] Cache invalidation by file signature
@@ -113,6 +113,7 @@
 - [x] Month, media-type, source, and extension filters
 - [x] Text search across filenames and immutable provenance
 - [x] Complete metadata and provenance detail panels
+- [x] Complete per-media catalog evidence and history panels
 - [x] Stable sorting, pagination, and filtered previous/next navigation
 
 ### Browser V1.1

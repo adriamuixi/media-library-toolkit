@@ -65,10 +65,17 @@ class FfprobeAdapter:
 
     extractor_name = "FFPROBE"
 
-    def __init__(self, command: str, timeout_seconds: int, panorama_threshold: float):
+    def __init__(
+        self,
+        command: str,
+        timeout_seconds: int,
+        panorama_threshold: float,
+        panorama_min_width_px: int,
+    ):
         self.command = command
         self.timeout_seconds = timeout_seconds
         self.panorama_threshold = panorama_threshold
+        self.panorama_min_width_px = panorama_min_width_px
 
     def status(self) -> ToolStatus:
         """Inspect ffprobe availability and version."""
@@ -115,7 +122,14 @@ class FfprobeAdapter:
         rotation = _rotation(video)
         width = _integer(video.get("width"))
         height = _integer(video.get("height"))
-        geometry = derive_geometry(width, height, rotation, None, self.panorama_threshold)
+        geometry = derive_geometry(
+            width,
+            height,
+            rotation,
+            None,
+            self.panorama_threshold,
+            self.panorama_min_width_px,
+        )
         duration = _decimal(file_format.get("duration") or video.get("duration"))
         average_rate = _rate(video.get("avg_frame_rate"))
         real_rate = _rate(video.get("r_frame_rate"))

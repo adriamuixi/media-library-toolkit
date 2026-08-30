@@ -36,14 +36,15 @@ The panorama fallback threshold is configurable:
 
 ```toml
 [metadata]
-panorama_aspect_ratio_threshold = 2.0
+panorama_aspect_ratio_threshold = 4.0
+panorama_min_width_px = 2000
 batch_size = 100
 timeout_seconds = 60
 exiftool_command = "exiftool"
 ffprobe_command = "ffprobe"
 ```
 
-It represents the longer normalized display dimension divided by the shorter dimension and must be greater than 1.0. Authoritative panorama metadata takes precedence over this geometric fallback.
+The ratio represents the longer normalized display dimension divided by the shorter dimension and must be greater than 1.0. A panorama must also have an orientation-normalized display width of at least `panorama_min_width_px`. The minimum-width rule applies even when authoritative panorama metadata is present.
 
 The batch size controls SQLite commit frequency during extraction. The timeout applies independently to each external-tool invocation. Commands may be executable names available on `PATH` or explicit executable paths. The application never installs external tools implicitly.
 

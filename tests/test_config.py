@@ -20,7 +20,8 @@ class ConfigTests(unittest.TestCase):
             self.assertNotEqual(production.database, test.database)
             self.assertTrue(production.database.is_relative_to(base))
             self.assertTrue(test.database.is_relative_to(base))
-            self.assertEqual(config.panorama_aspect_ratio_threshold, 2.0)
+            self.assertEqual(config.panorama_aspect_ratio_threshold, 4.0)
+            self.assertEqual(config.panorama_min_width_px, 2000)
             self.assertEqual(config.metadata_batch_size, 100)
             self.assertEqual(config.metadata_timeout_seconds, 60)
             self.assertEqual(config.exiftool_command, "exiftool")
@@ -50,6 +51,18 @@ class ConfigTests(unittest.TestCase):
             config_path = base / "invalid-panorama.toml"
             config_path.write_text(
                 "[metadata]\npanorama_aspect_ratio_threshold = 1.0\n",
+                encoding="utf-8",
+            )
+
+            with self.assertRaises(ConfigurationError):
+                load_config(config_path, base_directory=base)
+
+    def test_panorama_minimum_width_must_be_positive(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            base = Path(temporary_directory)
+            config_path = base / "invalid-panorama-width.toml"
+            config_path.write_text(
+                "[metadata]\npanorama_min_width_px = 0\n",
                 encoding="utf-8",
             )
 

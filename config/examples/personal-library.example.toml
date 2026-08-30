@@ -21,7 +21,8 @@ default_media_mode = "read-only"
 require_write_confirmation = true
 
 [metadata]
-panorama_aspect_ratio_threshold = 2.0
+panorama_aspect_ratio_threshold = 4.0
+panorama_min_width_px = 2000
 batch_size = 100
 timeout_seconds = 60
 exiftool_command = "exiftool"
