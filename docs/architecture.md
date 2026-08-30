@@ -41,7 +41,7 @@ Reconstructible analysis data, such as hashes, dimensions, codecs, and extracted
 
 ## Current Scope
 
-The current implementation initializes external working directories, maintains a versioned SQLite catalog, scans media read-only, extracts metadata read-only, and resolves effective dates from cataloged evidence. It does not modify media.
+The current implementation initializes external working directories, maintains a versioned SQLite catalog, scans media read-only, extracts metadata read-only, resolves effective dates, and detects media associations from cataloged evidence. It does not modify media.
 
 ## Runtime State
 

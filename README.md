@@ -145,6 +145,20 @@ media dates list \
 
 Resolution never hides uncertainty. Current states are `RESOLVED`, `SUSPICIOUS`, `CONFLICT`, and `NO_DATE`. Filesystem fallback is disabled by default because a copied file's modification time is not reliable capture evidence.
 
+Detect files that must remain together during later planning:
+
+```bash
+media associations detect \
+  --library "Personal Media" \
+  --source "iPhone Personal"
+
+media associations list \
+  --library "Personal Media" \
+  --source "iPhone Personal"
+```
+
+Live Photos prefer matching embedded content identifiers and fall back conservatively to compatible basenames. RAW/JPEG pairs and sidecars use deterministic same-directory basename rules. Ambiguous matches remain explicit `CONFLICT` records.
+
 The reset command always refuses a production profile and any database whose internal environment marker is not `TEST`.
 
 ## Configuration
@@ -172,6 +186,8 @@ media tools check
 media metadata
 media dates resolve
 media dates list
+media associations detect
+media associations list
 ```
 
 Use `media COMMAND --help` for command-specific help.

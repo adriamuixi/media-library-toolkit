@@ -65,6 +65,8 @@ The Foundation, V1.1 inventory, and V1.2 metadata phases are implemented. The pr
 - deterministic effective capture-date resolution from cataloged evidence;
 - explicit date confidence, timezone provenance, suspicious, conflict, and no-date states;
 - immutable date-resolution history with current-result pointers and input caching.
+- catalog-only Live Photo, RAW/JPEG, and sidecar association detection;
+- explicit association confidence and conflict states with inactive history retention.
 
 Explicit missing-file reconciliation has not yet been implemented.
 
@@ -104,6 +106,15 @@ Explicit missing-file reconciliation has not yet been implemented.
 - Never silently resolve contradictory metadata, implausible years, future dates, or ambiguous local times.
 - Filesystem capture-date fallback must remain explicitly configurable and disabled by default.
 - `NO_DATE` is valid catalog state and must never be replaced with an invented date.
+
+## Media Associations
+
+- Live Photo metadata identifiers take precedence over filename inference.
+- Basename-only Live Photo matching must remain conservative and expose ambiguity.
+- RAW and JPEG files are complementary assets, not duplicates.
+- Sidecars are independent files linked to their media; never embed or discard them implicitly.
+- Every future rename, organization, copy, or move plan must include active companions.
+- Repeated detection may deactivate a relation but must not delete its historical record.
 
 ## Coding Conventions
 

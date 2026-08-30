@@ -9,6 +9,11 @@ import sys
 from typing import Sequence
 
 from media_toolkit import __version__
+from media_toolkit.associations.service import (
+    AssociationRequest,
+    list_associations,
+    run_association_detection,
+)
 from media_toolkit.catalog.database import (
     get_database_status,
     initialize_database,
@@ -254,6 +259,45 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optionally restrict output to one review state.",
     )
     dates_list_parser.set_defaults(handler=_handle_dates_list)
+
+    associations_parser = commands.add_parser(
+        "associations", help="Detect or list related media and sidecar files."
+    )
+    associations_commands = associations_parser.add_subparsers(
+        dest="associations_command", required=True
+    )
+    associations_detect_parser = associations_commands.add_parser(
+        "detect", help="Detect associations from cataloged metadata and paths."
+    )
+    associations_detect_parser.add_argument(
+        "--library", required=True, help="Name of the existing logical library."
+    )
+    associations_detect_parser.add_argument(
+        "--source", required=True, dest="source_name", help="Name of the registered source."
+    )
+    associations_detect_parser.set_defaults(handler=_handle_associations_detect)
+
+    associations_list_parser = associations_commands.add_parser(
+        "list", help="List current or historical detected associations."
+    )
+    associations_list_parser.add_argument(
+        "--library", required=True, help="Name of the existing logical library."
+    )
+    associations_list_parser.add_argument(
+        "--source", required=True, dest="source_name", help="Name of the registered source."
+    )
+    associations_list_parser.add_argument(
+        "--type",
+        choices=("live-photo", "raw-jpeg", "sidecar"),
+        dest="relation_type",
+        help="Optionally restrict output to one relation type.",
+    )
+    associations_list_parser.add_argument(
+        "--include-inactive",
+        action="store_true",
+        help="Include historical relations not present in the latest detection.",
+    )
+    associations_list_parser.set_defaults(handler=_handle_associations_list)
     return parser
 
 
@@ -510,6 +554,54 @@ def _handle_dates_list(args: argparse.Namespace, config: AppConfig) -> int:
     return 0
 
 
+def _handle_associations_detect(args: argparse.Namespace, config: AppConfig) -> int:
+    profile = config.profile(args.profile)
+    summary = run_association_detection(
+        AssociationRequest(
+            database=profile.database,
+            environment=profile.environment,
+            library_name=args.library,
+            source_name=args.source_name,
+        )
+    )
+    print(f"Files: {summary.file_count}")
+    print(f"Relations: {summary.relation_count}")
+    print(f"Live Photos: {summary.live_photo_count}")
+    print(f"RAW/JPEG pairs: {summary.raw_jpeg_count}")
+    print(f"Sidecars: {summary.sidecar_count}")
+    print(f"Conflicts: {summary.conflict_count}")
+    return 0
+
+
+def _handle_associations_list(args: argparse.Namespace, config: AppConfig) -> int:
+    profile = config.profile(args.profile)
+    relation_types = {
+        "live-photo": "LIVE_PHOTO_PAIR",
+        "raw-jpeg": "RAW_JPEG_PAIR",
+        "sidecar": "SIDECAR_ASSOCIATION",
+    }
+    relation_type = relation_types.get(args.relation_type)
+    rows = list_associations(
+        profile.database,
+        profile.environment,
+        args.library,
+        args.source_name,
+        relation_type,
+        args.include_inactive,
+    )
+    if not rows:
+        print("No associations found.")
+        return 0
+    print("TYPE\tSTATUS\tCONFIDENCE\tMETHOD\tPRIMARY\tCOMPANION\tACTIVE")
+    for row in rows:
+        print(
+            f"{row.relation_type}\t{row.status}\t{row.confidence}\t"
+            f"{row.match_method}\t{row.primary_path}\t{row.companion_path}\t"
+            f"{'YES' if row.active else 'NO'}"
+        )
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the CLI and convert expected failures into concise messages."""
     parser = build_parser()
@@ -527,6 +619,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             command_name = f"tools-{args.tools_command}"
         elif getattr(args, "dates_command", None):
             command_name = f"dates-{args.dates_command}"
+        elif getattr(args, "associations_command", None):
+            command_name = f"associations-{args.associations_command}"
         if args.command in {"scan", "metadata"}:
             ensure_external_working_paths(
                 args.root,

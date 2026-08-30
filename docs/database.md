@@ -58,6 +58,12 @@ Catalog backups use SQLite's consistent online backup mechanism rather than copy
 
 The local capture value and precision are always kept when a date is selected. UTC is nullable because cameras commonly omit an offset. A source's configured IANA timezone can supply the conversion while remaining visibly identified as source-derived rather than embedded metadata. Date-only evidence is marked explicitly so a storage placeholder cannot be mistaken for a captured midnight time.
 
+## Media Relations
+
+`media_relation` links a primary media record to a companion within the source where the relationship was detected. Relation types are `LIVE_PHOTO_PAIR`, `RAW_JPEG_PAIR`, and `SIDECAR_ASSOCIATION`. Each row stores role details, confidence, detected or conflict status, match method, evidence key, and first and last detection timestamps.
+
+Detection is idempotent. A relationship missing from a later run becomes inactive rather than being deleted, preserving catalog history for future audit and provenance work.
+
 ## Migrations
 
 Migrations are ordered SQL files in `src/media_toolkit/catalog/migrations/`. Applied SQL is identified by version and SHA-256 checksum. Editing an already applied migration causes a hard failure; schema changes require a new migration.

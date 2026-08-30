@@ -50,3 +50,8 @@ The project intends to follow Semantic Versioning once stable public releases be
 - Added conservative filename parsing and opt-in low-confidence filesystem fallback.
 - Added future, early-year, contradictory metadata, filesystem-gap, and daylight-saving-time review reasons.
 - Added `media dates resolve` and filterable `media dates list` commands.
+- Added catalog-only Live Photo detection using metadata identifiers and conservative basename fallback.
+- Added deterministic RAW/JPEG and sidecar association rules.
+- Added explicit association confidence and conflict states.
+- Added idempotent relation refresh with inactive history preservation.
+- Added `media associations detect` and filterable `media associations list` commands.

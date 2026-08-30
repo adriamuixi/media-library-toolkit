@@ -36,9 +36,9 @@
 - [x] Effective capture date resolution
 - [x] Confidence and suspicious-date states
 - [x] Timezone handling
-- [ ] Live Photo associations
-- [ ] RAW and JPEG associations
-- [ ] Sidecar associations
+- [x] Live Photo associations
+- [x] RAW and JPEG associations
+- [x] Sidecar associations
 
 ## V1.4 — Exact Duplicates
 

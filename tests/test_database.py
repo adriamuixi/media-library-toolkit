@@ -24,7 +24,7 @@ class DatabaseTests(unittest.TestCase):
             self.assertTrue(status.exists)
             self.assertEqual(status.environment, "TEST")
             self.assertEqual(status.profile_name, "test")
-            self.assertEqual(status.schema_version, 5)
+            self.assertEqual(status.schema_version, 6)
             self.assertTrue(status.database_id)
 
     def test_reinitialization_is_idempotent(self) -> None:
@@ -35,7 +35,7 @@ class DatabaseTests(unittest.TestCase):
             second = initialize_database(path, "test", "TEST")
 
             self.assertEqual(first.database_id, second.database_id)
-            self.assertEqual(second.schema_version, 5)
+            self.assertEqual(second.schema_version, 6)
 
     def test_reset_recreates_test_catalog_with_new_identity(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -150,7 +150,7 @@ class DatabaseTests(unittest.TestCase):
 
             status = initialize_database(path, "test", "TEST")
 
-            self.assertEqual(status.schema_version, 5)
+            self.assertEqual(status.schema_version, 6)
             with closing(sqlite3.connect(path)) as connection:
                 tables = {
                     row[0]
@@ -166,6 +166,7 @@ class DatabaseTests(unittest.TestCase):
             self.assertIn("media_metadata", tables)
             self.assertIn("date_resolution_attempt", tables)
             self.assertIn("media_date_resolution", tables)
+            self.assertIn("media_relation", tables)
 
 
 if __name__ == "__main__":
