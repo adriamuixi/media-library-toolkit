@@ -464,6 +464,13 @@ def build_parser() -> argparse.ArgumentParser:
         "--format", choices=("csv", "json"), default="csv", dest="report_format"
     )
     plan_export_parser.set_defaults(handler=_handle_plan_export)
+
+    review_parser = commands.add_parser(
+        "review", help="Serve the loopback-only local catalog review interface."
+    )
+    review_parser.add_argument("--library", required=True)
+    review_parser.add_argument("--port", type=int, default=8080)
+    review_parser.set_defaults(handler=_handle_review)
     return parser
 
 
@@ -961,6 +968,25 @@ def _handle_plan_export(args: argparse.Namespace, config: AppConfig) -> int:
     )
     print(f"Plan export rows: {count}")
     print(f"Report: {args.output.expanduser().resolve()}")
+    return 0
+
+
+def _handle_review(args: argparse.Namespace, config: AppConfig) -> int:
+    if not 1 <= args.port <= 65535:
+        raise MediaToolkitError("Review port must be between 1 and 65535.")
+    try:
+        from media_toolkit.review.web import create_review_app
+    except ModuleNotFoundError as exc:
+        if exc.name == "flask":
+            raise MediaToolkitError(
+                "Local review requires the optional review dependency. "
+                "Run: .venv/bin/python -m pip install -e '.[review]'."
+            ) from exc
+        raise
+    profile = config.profile(args.profile)
+    application = create_review_app(profile.database, profile.environment, args.library)
+    print(f"Local review running at: http://127.0.0.1:{args.port}")
+    application.run(host="127.0.0.1", port=args.port, debug=False)
     return 0
 
 

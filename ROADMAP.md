@@ -70,9 +70,9 @@
 
 ## V1.7 — Local Review
 
-- [ ] Paginated local HTML interface
-- [ ] Pair and group duplicate review
-- [ ] Date-conflict and `no_date` review
+- [x] Paginated local HTML interface
+- [x] Pair and group duplicate review
+- [x] Date-conflict and `no_date` review
 - [x] Audited manual decisions
 - [ ] Cached previews outside media roots
 

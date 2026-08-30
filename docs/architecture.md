@@ -52,7 +52,7 @@ Browser on 127.0.0.1
 
 It will use an optional Flask server with server-rendered HTML, CSS, and small vanilla JavaScript modules. Flask is preferred over FastAPI because the browser does not require a public typed API or an ASGI stack; Flask provides routing, templates, conditional file responses, and a smaller conceptual footprint. The Python standard-library HTTP server is not selected because secure routing, range requests, response headers, and error handling would require custom infrastructure.
 
-The browser is not the Local Review workflow. Local Review may append audited decisions to SQLite. The Local Media Browser exposes no mutation routes and opens SQLite in read-only mode. Shared query and thumbnail components may be reused without combining their permission models.
+The browser is not the Local Review workflow. Local Review is a loopback-only paginated HTML interface for catalog review and may append audited decisions to SQLite. The Local Media Browser exposes no mutation routes and opens SQLite in read-only mode. Shared query and thumbnail components may be reused without combining their permission models.
 
 ## Current Scope
 

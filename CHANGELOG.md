@@ -12,6 +12,8 @@ The project intends to follow Semantic Versioning once stable public releases be
 
 - Added immutable audited manual date decisions that append catalog evidence without modifying media.
 
+- Added a loopback-only paginated local review interface for exact duplicate groups and date review states.
+
 - Added deterministic read-only year-or-no-date organization plans with checksums and explicit destination-conflict records.
 
 - Added association-aware organization planning that keeps detected related files in one planned year directory.
