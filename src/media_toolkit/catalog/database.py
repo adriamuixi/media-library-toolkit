@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -37,7 +37,7 @@ def connect_database(path: Path) -> sqlite3.Connection:
 
 
 @contextmanager
-def open_database(path: Path) -> Iterator[sqlite3.Connection]:
+def open_database(path: Path) -> Generator[sqlite3.Connection, None, None]:
     """Open a transactional connection and always close it on exit."""
     connection = connect_database(path)
     try:
