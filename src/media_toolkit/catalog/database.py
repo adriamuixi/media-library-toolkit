@@ -108,6 +108,8 @@ def get_database_status(path: Path) -> DatabaseStatus:
 
     if metadata is None:
         raise DatabaseSafetyError(f"Catalog metadata marker is missing: {path}")
+    if version_row is None:
+        raise DatabaseSafetyError(f"Catalog schema version is missing: {path}")
     return DatabaseStatus(
         path=path,
         exists=True,

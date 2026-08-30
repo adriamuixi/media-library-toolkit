@@ -89,6 +89,18 @@ media source list --library "Personal Media"
 
 Registration is idempotent. Repeating an identical command returns the existing record. Reusing a name with conflicting settings fails instead of silently updating catalog history.
 
+Scan a small source in READ ONLY mode:
+
+```bash
+media scan \
+  --library "Personal Media" \
+  --source "iPhone Personal" \
+  --root "/Volumes/SMALL_TEST_LIBRARY" \
+  --media-type all
+```
+
+The scanner stores only paths relative to `--root` as portable file locations. The absolute root is retained only in the scan execution record for diagnostics. Hidden entries and symbolic links are skipped by default.
+
 The reset command always refuses a production profile and any database whose internal environment marker is not `TEST`.
 
 ## Configuration
@@ -111,6 +123,7 @@ media library add
 media library list
 media source add
 media source list
+media scan
 ```
 
 Use `media COMMAND --help` for command-specific help.

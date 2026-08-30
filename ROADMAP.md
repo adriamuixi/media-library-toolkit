@@ -14,12 +14,12 @@
 ## V1.1 — Scan
 
 - [x] Register libraries and sources
-- [ ] Read-only filesystem inventory
-- [ ] Relative paths
-- [ ] Photo, video, sidecar, and unknown classification
-- [ ] Idempotent repeated scans
+- [x] Read-only filesystem inventory
+- [x] Relative paths
+- [x] Photo, video, sidecar, and unknown classification
+- [x] Idempotent repeated scans
 - [ ] Resume support
-- [ ] Per-file error recording
+- [x] Per-file error recording
 
 ## V1.2 — Metadata
 

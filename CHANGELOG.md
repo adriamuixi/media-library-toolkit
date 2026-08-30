@@ -23,3 +23,10 @@ The project intends to follow Semantic Versioning once stable public releases be
 - Added IANA timezone validation for source defaults.
 - Added strict catalog environment checks to registration operations.
 - Added transactional SQLite connection handling with guaranteed closure.
+- Added the READ ONLY `media scan` filesystem inventory command.
+- Added relative file locations and stable media identities to SQLite.
+- Added photo, video, sidecar, and unknown extension classification.
+- Added idempotent rescans with batched SQLite progress persistence.
+- Added non-fatal traversal error and warning records.
+- Added safeguards that keep generated state outside media roots.
+- Added default hidden-entry exclusion and non-following symlink behavior.

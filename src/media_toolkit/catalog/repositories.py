@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 import sqlite3
+from typing import Generic, TypeVar
 from uuid import uuid4
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -39,11 +40,14 @@ class SourceRecord:
     updated_at: str
 
 
+RecordType = TypeVar("RecordType", LibraryRecord, SourceRecord)
+
+
 @dataclass(frozen=True)
-class RegistrationResult:
+class RegistrationResult(Generic[RecordType]):
     """The result of an idempotent catalog registration."""
 
-    record: LibraryRecord | SourceRecord
+    record: RecordType
     created: bool
 
 
@@ -101,7 +105,7 @@ def register_library(
     environment: str,
     name: str,
     description: str | None = None,
-) -> RegistrationResult:
+) -> RegistrationResult[LibraryRecord]:
     """Create a library or return an identical existing registration."""
     require_database(database, environment)
     clean_name = _clean_required(name, "Library name")
@@ -149,6 +153,8 @@ def register_library(
             """,
             (library_id,),
         ).fetchone()
+        if row is None:
+            raise CatalogError("Library registration could not be read back.")
     return RegistrationResult(record=_library_from_row(row), created=True)
 
 
@@ -175,7 +181,7 @@ def register_source(
     name: str,
     source_type: str,
     default_timezone: str | None = None,
-) -> RegistrationResult:
+) -> RegistrationResult[SourceRecord]:
     """Create a source or return an identical existing registration."""
     require_database(database, environment)
     clean_library_name = _clean_required(library_name, "Library name")
@@ -267,6 +273,8 @@ def register_source(
             """,
             (source_id,),
         ).fetchone()
+        if row is None:
+            raise CatalogError("Source registration could not be read back.")
     return RegistrationResult(record=_source_from_row(row), created=True)
 
 

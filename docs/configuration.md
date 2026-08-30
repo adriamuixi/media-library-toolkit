@@ -40,3 +40,15 @@ panorama_aspect_ratio_threshold = 2.0
 ```
 
 It represents the longer normalized display dimension divided by the shorter dimension and must be greater than 1.0. Authoritative panorama metadata takes precedence over this geometric fallback.
+
+## Scan Settings
+
+```toml
+[scan]
+include_hidden = false
+batch_size = 500
+```
+
+Hidden files and directories are excluded by default. The batch size controls how often scan progress and inventory changes are committed to SQLite. A smaller value preserves progress more frequently; a larger value reduces transaction overhead.
+
+Symbolic links are never followed in the current scanner and cannot be enabled through configuration.

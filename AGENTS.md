@@ -37,7 +37,7 @@ Physical files, catalog records, and proposed operations are separate concepts.
 
 ## Current State
 
-The Foundation phase is complete and V1.1 catalog registration is implemented. The project currently provides:
+The Foundation phase is complete and the first V1.1 read-only inventory is implemented. The project currently provides:
 
 - an installable Python CLI;
 - TOML configuration;
@@ -46,9 +46,12 @@ The Foundation phase is complete and V1.1 catalog registration is implemented. T
 - isolated TEST and PRODUCTION catalog profiles;
 - a reset command restricted to catalogs marked as TEST;
 - idempotent logical library registration;
-- idempotent provenance source registration with optional IANA timezone validation.
+- idempotent provenance source registration with optional IANA timezone validation;
+- streaming, non-following READ ONLY filesystem scans;
+- relative-path photo, video, sidecar, and unknown-file inventory;
+- idempotent file-location updates and per-entry traversal error records.
 
-Media scanning has not yet been implemented.
+Resume and explicit missing-file reconciliation have not yet been implemented.
 
 ## Database Rules
 
@@ -59,6 +62,9 @@ Media scanning has not yet been implemented.
 - Test and production data should use separate database files.
 - Production catalog reset is not supported by the CLI.
 - Absolute runtime roots may be recorded for diagnostics but never used as portable media identity.
+- Scans must store media locations relative to the runtime source root.
+- Scan traversal must not follow symbolic links.
+- Generated catalogs, logs, reports, and caches must remain outside the media root.
 
 ## Image Geometry
 

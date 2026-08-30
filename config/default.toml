@@ -22,3 +22,7 @@ require_write_confirmation = true
 
 [metadata]
 panorama_aspect_ratio_threshold = 2.0
+
+[scan]
+include_hidden = false
+batch_size = 500

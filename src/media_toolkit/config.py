@@ -34,6 +34,8 @@ class AppConfig:
     default_media_mode: str
     require_write_confirmation: bool
     panorama_aspect_ratio_threshold: float
+    scan_include_hidden: bool
+    scan_batch_size: int
 
     def profile(self, name: str | None = None) -> ProfileConfig:
         """Return a configured profile or raise a readable error."""
@@ -70,6 +72,7 @@ DEFAULTS: dict[str, Any] = {
         "require_write_confirmation": True,
     },
     "metadata": {"panorama_aspect_ratio_threshold": 2.0},
+    "scan": {"include_hidden": False, "batch_size": 500},
 }
 
 
@@ -110,6 +113,7 @@ def load_config(
     paths = values["paths"]
     safety = values["safety"]
     metadata = values["metadata"]
+    scan = values["scan"]
 
     profiles: dict[str, ProfileConfig] = {}
     for name, raw_profile in values["profiles"].items():
@@ -140,6 +144,10 @@ def load_config(
             "The panorama aspect-ratio threshold must be greater than 1.0."
         )
 
+    scan_batch_size = int(scan["batch_size"])
+    if scan_batch_size < 1:
+        raise ConfigurationError("The scan batch size must be at least 1.")
+
     return AppConfig(
         base_directory=base,
         default_profile=default_profile,
@@ -152,4 +160,6 @@ def load_config(
         default_media_mode=default_media_mode,
         require_write_confirmation=bool(safety["require_write_confirmation"]),
         panorama_aspect_ratio_threshold=panorama_threshold,
+        scan_include_hidden=bool(scan["include_hidden"]),
+        scan_batch_size=scan_batch_size,
     )

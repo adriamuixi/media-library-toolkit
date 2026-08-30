@@ -1,4 +1,6 @@
 from contextlib import closing
+from hashlib import sha256
+from importlib.resources import files
 from pathlib import Path
 import sqlite3
 import tempfile
@@ -22,7 +24,7 @@ class DatabaseTests(unittest.TestCase):
             self.assertTrue(status.exists)
             self.assertEqual(status.environment, "TEST")
             self.assertEqual(status.profile_name, "test")
-            self.assertEqual(status.schema_version, 1)
+            self.assertEqual(status.schema_version, 2)
             self.assertTrue(status.database_id)
 
     def test_reinitialization_is_idempotent(self) -> None:
@@ -33,7 +35,7 @@ class DatabaseTests(unittest.TestCase):
             second = initialize_database(path, "test", "TEST")
 
             self.assertEqual(first.database_id, second.database_id)
-            self.assertEqual(second.schema_version, 1)
+            self.assertEqual(second.schema_version, 2)
 
     def test_reset_recreates_test_catalog_with_new_identity(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -99,6 +101,66 @@ class DatabaseTests(unittest.TestCase):
                     )
                 }
             self.assertEqual(tables, {"unrelated"})
+
+    def test_initialize_migrates_existing_foundation_catalog(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            path = Path(temporary_directory) / "foundation.sqlite3"
+            migration = files("media_toolkit.catalog.migrations").joinpath(
+                "0001_foundation.sql"
+            )
+            migration_sql = migration.read_text(encoding="utf-8")
+            migration_checksum = sha256(migration_sql.encode()).hexdigest()
+            with closing(sqlite3.connect(path)) as connection:
+                with connection:
+                    connection.execute(
+                        """
+                        CREATE TABLE schema_version (
+                            version INTEGER PRIMARY KEY,
+                            migration_name TEXT NOT NULL,
+                            checksum TEXT NOT NULL,
+                            applied_at TEXT NOT NULL,
+                            software_version TEXT NOT NULL
+                        )
+                        """
+                    )
+                    connection.executescript(migration_sql)
+                    connection.execute(
+                        """
+                        INSERT INTO schema_version (
+                            version,
+                            migration_name,
+                            checksum,
+                            applied_at,
+                            software_version
+                        ) VALUES (1, 'foundation', ?, 'now', '0.1.0')
+                        """,
+                        (migration_checksum,),
+                    )
+                    connection.execute(
+                        """
+                        INSERT INTO catalog_metadata (
+                            singleton,
+                            database_id,
+                            profile_name,
+                            environment,
+                            created_at
+                        ) VALUES (1, 'foundation-id', 'test', 'TEST', 'now')
+                        """
+                    )
+
+            status = initialize_database(path, "test", "TEST")
+
+            self.assertEqual(status.schema_version, 2)
+            with closing(sqlite3.connect(path)) as connection:
+                tables = {
+                    row[0]
+                    for row in connection.execute(
+                        "SELECT name FROM sqlite_master WHERE type = 'table'"
+                    )
+                }
+            self.assertIn("media_file", tables)
+            self.assertIn("file_location", tables)
+            self.assertIn("scan_error", tables)
 
 
 if __name__ == "__main__":

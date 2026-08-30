@@ -21,6 +21,8 @@ class ConfigTests(unittest.TestCase):
             self.assertTrue(production.database.is_relative_to(base))
             self.assertTrue(test.database.is_relative_to(base))
             self.assertEqual(config.panorama_aspect_ratio_threshold, 2.0)
+            self.assertFalse(config.scan_include_hidden)
+            self.assertEqual(config.scan_batch_size, 500)
 
     def test_default_media_mode_must_remain_read_only(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -39,6 +41,18 @@ class ConfigTests(unittest.TestCase):
             config_path = base / "invalid-panorama.toml"
             config_path.write_text(
                 "[metadata]\npanorama_aspect_ratio_threshold = 1.0\n",
+                encoding="utf-8",
+            )
+
+            with self.assertRaises(ConfigurationError):
+                load_config(config_path, base_directory=base)
+
+    def test_scan_batch_size_must_be_positive(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            base = Path(temporary_directory)
+            config_path = base / "invalid-scan.toml"
+            config_path.write_text(
+                "[scan]\nbatch_size = 0\n",
                 encoding="utf-8",
             )
 

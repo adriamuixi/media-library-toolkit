@@ -23,6 +23,8 @@ from media_toolkit.catalog.repositories import (
 from media_toolkit.config import AppConfig, load_config
 from media_toolkit.errors import MediaToolkitError
 from media_toolkit.logging_config import configure_logging
+from media_toolkit.scan.safety import ensure_external_working_paths
+from media_toolkit.scan.service import ScanRequest, run_scan
 
 
 LOGGER = logging.getLogger(__name__)
@@ -136,6 +138,31 @@ def build_parser() -> argparse.ArgumentParser:
         "--library", help="Optionally restrict results to one library name."
     )
     source_list_parser.set_defaults(handler=_handle_source_list)
+
+    scan_parser = commands.add_parser(
+        "scan", help="Inventory a registered source root without modifying media."
+    )
+    scan_parser.add_argument(
+        "--library", required=True, help="Name of the existing logical library."
+    )
+    scan_parser.add_argument(
+        "--source", required=True, dest="source_name", help="Name of the registered source."
+    )
+    scan_parser.add_argument(
+        "--root", required=True, type=Path, help="Physical source root for this scan."
+    )
+    scan_parser.add_argument(
+        "--media-type",
+        choices=("photos", "videos", "all"),
+        default="all",
+        help="Restrict inventory to photos, videos, or all regular files.",
+    )
+    scan_parser.add_argument(
+        "--include-hidden",
+        action="store_true",
+        help="Include hidden files and directories for this scan.",
+    )
+    scan_parser.set_defaults(handler=_handle_scan)
     return parser
 
 
@@ -250,6 +277,43 @@ def _handle_source_list(args: argparse.Namespace, config: AppConfig) -> int:
     return 0
 
 
+def _generated_paths(config: AppConfig, profile_name: str | None) -> tuple[Path, ...]:
+    profile = config.profile(profile_name)
+    return (
+        config.workspace,
+        config.logs,
+        config.reports,
+        config.cache,
+        profile.database,
+    )
+
+
+def _handle_scan(args: argparse.Namespace, config: AppConfig) -> int:
+    profile = config.profile(args.profile)
+    summary = run_scan(
+        ScanRequest(
+            database=profile.database,
+            environment=profile.environment,
+            library_name=args.library,
+            source_name=args.source_name,
+            root=args.root,
+            media_filter=args.media_type,
+            include_hidden=args.include_hidden or config.scan_include_hidden,
+            batch_size=config.scan_batch_size,
+            generated_paths=_generated_paths(config, args.profile),
+        )
+    )
+    print(f"Scan ID: {summary.scan_id}")
+    print(f"Status: {summary.status}")
+    print(f"Discovered: {summary.discovered_count}")
+    print(f"New: {summary.new_count}")
+    print(f"Updated: {summary.updated_count}")
+    print(f"Skipped: {summary.skipped_count}")
+    print(f"Warnings: {summary.warning_count}")
+    print(f"Errors: {summary.error_count}")
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the CLI and convert expected failures into concise messages."""
     parser = build_parser()
@@ -263,6 +327,11 @@ def main(argv: Sequence[str] | None = None) -> int:
             command_name = f"library-{args.library_command}"
         elif getattr(args, "source_command", None):
             command_name = f"source-{args.source_command}"
+        if args.command == "scan":
+            ensure_external_working_paths(
+                args.root,
+                _generated_paths(config, args.profile),
+            )
         configure_logging(config.logs, config.log_level, command_name)
         LOGGER.info("Starting command=%s profile=%s", command_name, args.profile or config.default_profile)
         return int(args.handler(args, config))
