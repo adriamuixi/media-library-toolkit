@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Local Media Browser is a planned read-only visual interface for an organized media library. It combines physical files with the existing SQLite catalog without creating a parallel catalog or re-extracting metadata during page loads.
+Local Media Browser is a read-only visual interface for an organized media library. It combines physical files with the existing SQLite catalog without creating a parallel catalog or re-extracting metadata during page loads.
 
 It represents the definitive organized library:
 
@@ -18,7 +18,7 @@ no_date/
 
 ## Dependencies and Architecture
 
-The browser and local review interface use the optional review installation extra so the core CLI remains dependency-light. Install it with the documented review extra. The planned stack is:
+The browser uses the optional browser installation extra so the core CLI remains dependency-light. Install it with the documented browser extra. The stack is:
 
 ```text
 Flask
@@ -35,7 +35,8 @@ The conceptual command is:
 
 ```bash
 media browse \
-  --source "/Volumes/MEDIA_LIBRARY" \
+  --library "Personal Media" \
+  --root "/Volumes/MEDIA_LIBRARY" \
   --port 8080
 ```
 
@@ -134,12 +135,12 @@ A missing original remains in gallery and detail queries using catalog metadata,
 
 ### Browser V0
 
-- loopback server and read-only query layer;
-- paginated photo gallery;
-- year filter;
-- lazy photo thumbnails;
-- basic detail view;
-- missing and unavailable states.
+- loopback-only Flask server and SQLite mode=ro query layer;
+- paginated photo gallery and year or no-date filter;
+- unconditional Unicode-safe toAnalyze exclusion;
+- lazy photo thumbnails outside media roots;
+- basic media detail view with missing-file state;
+- media-ID-only content serving with root and symbolic-link validation.
 
 ### Browser V1
 

@@ -48,7 +48,7 @@ cd media-library-toolkit
 ./scripts/bootstrap.sh --install-system-dependencies
 ```
 
-The default bootstrap installs the project, development tools, local review interface, and local Database Browser. It creates the virtual environment; activate it with:
+The default bootstrap installs the project, development tools, local review interface, Local Media Browser, and local Database Browser. It creates the virtual environment; activate it with:
 
 ```bash
 source .venv/bin/activate
@@ -237,12 +237,15 @@ media plan create --library LIBRARY
 media plan list --id PLAN_ID
 media plan export --id PLAN_ID --output PATH
 media review --library LIBRARY --root MEDIA_ROOT --port 8080
+media browse --library LIBRARY --root MEDIA_ROOT --port 8080
 media operations copy --plan PLAN_ID --source-root SOURCE --destination-root DESTINATION --confirm-write PLAN_ID
 media operations move --plan PLAN_ID --source-root SOURCE --destination-root DESTINATION --confirm-write PLAN_ID
 media db browse --port 8081
 ```
 
 Use `media COMMAND --help` for command-specific help.
+
+`media browse` is a loopback-only read-only gallery for an organized library. It excludes the `toAnalyze` directory and writes generated thumbnails only under the configured external cache.
 
 ## Repository Structure
 

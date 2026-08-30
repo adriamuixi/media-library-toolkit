@@ -99,13 +99,13 @@
 
 ### Browser V0
 
-- [ ] Loopback-only local Flask server
-- [ ] Read-only SQLite query layer
-- [ ] Organized-library scope with unconditional `toAnalyze` exclusion
-- [ ] Paginated photo gallery and year filter
-- [ ] On-demand photo thumbnails cached outside media roots
-- [ ] Basic media detail view and missing-preview states
-- [ ] Media-ID-only safe file serving
+- [x] Loopback-only local Flask server
+- [x] Read-only SQLite query layer
+- [x] Organized-library scope with unconditional `toAnalyze` exclusion
+- [x] Paginated photo gallery and year filter
+- [x] On-demand photo thumbnails cached outside media roots
+- [x] Basic media detail view and missing-preview states
+- [x] Media-ID-only safe file serving
 
 ### Browser V1
 

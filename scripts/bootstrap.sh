@@ -2,7 +2,7 @@
 set -euo pipefail
 
 install_system_dependencies=false
-extras="dev,review,database"
+extras="dev,review,browser,database"
 
 for argument in "$@"; do
     case "$argument" in
@@ -14,7 +14,7 @@ for argument in "$@"; do
             ;;
         --help)
             echo "Usage: ./scripts/bootstrap.sh [--install-system-dependencies] [--runtime]"
-            echo "Creates .venv and installs the project with development and review extras."
+            echo "Creates .venv and installs the project with development and local browser extras."
             echo "Use --install-system-dependencies on Debian or Ubuntu when Python lacks pip or venv."
             exit 0
             ;;

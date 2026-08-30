@@ -36,6 +36,15 @@ def connect_database(path: Path) -> sqlite3.Connection:
     return connection
 
 
+def connect_readonly_database(path: Path) -> sqlite3.Connection:
+    """Open a catalog connection that SQLite itself cannot write through."""
+    connection = sqlite3.connect(f"file:{path.resolve()}?mode=ro", uri=True)
+    connection.row_factory = sqlite3.Row
+    connection.execute("PRAGMA query_only = ON")
+    connection.execute("PRAGMA foreign_keys = ON")
+    return connection
+
+
 @contextmanager
 def open_database(path: Path) -> Generator[sqlite3.Connection, None, None]:
     """Open a transactional connection and always close it on exit."""
@@ -43,6 +52,16 @@ def open_database(path: Path) -> Generator[sqlite3.Connection, None, None]:
     try:
         with connection:
             yield connection
+    finally:
+        connection.close()
+
+
+@contextmanager
+def open_readonly_database(path: Path) -> Generator[sqlite3.Connection, None, None]:
+    """Open a read-only catalog connection and always close it on exit."""
+    connection = connect_readonly_database(path)
+    try:
+        yield connection
     finally:
         connection.close()
 

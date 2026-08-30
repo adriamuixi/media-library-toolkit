@@ -483,6 +483,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     review_parser.set_defaults(handler=_handle_review)
 
+    browse_parser = commands.add_parser(
+        "browse", help="Serve a loopback-only, read-only organized media browser."
+    )
+    browse_parser.add_argument("--library", required=True)
+    browse_parser.add_argument("--root", required=True, type=Path)
+    browse_parser.add_argument("--port", type=int, default=8080)
+    browse_parser.set_defaults(handler=_handle_browse)
+
     operations_parser = commands.add_parser(
         "operations", help="Apply explicitly confirmed controlled media operations."
     )
@@ -1051,6 +1059,27 @@ def _handle_review(args: argparse.Namespace, config: AppConfig) -> int:
         profile.database, profile.environment, args.library, args.root, config.cache
     )
     print(f"Local review running at: http://127.0.0.1:{args.port}")
+    application.run(host="127.0.0.1", port=args.port, debug=False)
+    return 0
+
+
+def _handle_browse(args: argparse.Namespace, config: AppConfig) -> int:
+    if not 1 <= args.port <= 65535:
+        raise MediaToolkitError("Media Browser port must be between 1 and 65535.")
+    try:
+        from media_toolkit.browser.web import create_browser_app
+    except ModuleNotFoundError as exc:
+        if exc.name in {"flask", "PIL"}:
+            raise MediaToolkitError(
+                "Local media browsing requires the optional browser dependency. "
+                "Run: .venv/bin/python -m pip install -e '.[browser]'."
+            ) from exc
+        raise
+    profile = config.profile(args.profile)
+    application = create_browser_app(
+        profile.database, profile.environment, args.library, args.root, config.cache
+    )
+    print(f"Local media browser running at: http://127.0.0.1:{args.port}")
     application.run(host="127.0.0.1", port=args.port, debug=False)
     return 0
 
