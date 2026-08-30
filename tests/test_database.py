@@ -7,6 +7,7 @@ import tempfile
 import unittest
 
 from media_toolkit.catalog.database import (
+    backup_database,
     get_database_status,
     initialize_database,
     reset_test_database,
@@ -82,6 +83,17 @@ class DatabaseTests(unittest.TestCase):
 
             self.assertFalse(status.exists)
             self.assertFalse(path.exists())
+
+    def test_backup_creates_separate_consistent_catalog(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            base = Path(temporary_directory)
+            path = base / "catalog.sqlite3"
+            initialize_database(path, "test", "TEST")
+
+            backup = backup_database(path, "TEST", base / "backup.sqlite3")
+
+            self.assertTrue(backup.is_file())
+            self.assertEqual(get_database_status(backup).environment, "TEST")
 
     def test_initialize_refuses_to_adopt_unmarked_sqlite_database(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:

@@ -155,3 +155,27 @@ def reset_test_database(path: Path, profile_name: str, environment: str) -> Data
                 auxiliary.unlink()
 
     return initialize_database(path, profile_name, environment)
+
+
+def backup_database(path: Path, environment: str, output: Path) -> Path:
+    """Create an exclusive consistent SQLite backup outside every recorded media root."""
+    require_database(path, environment)
+    destination = output.expanduser().resolve()
+    if destination.exists():
+        raise DatabaseSafetyError(f"Database backup already exists: {destination}")
+    source = connect_database(path)
+    try:
+        roots = source.execute("SELECT DISTINCT root_path_snapshot FROM scan").fetchall()
+        for row in roots:
+            root = Path(row["root_path_snapshot"]).expanduser().resolve()
+            if destination == root or destination.is_relative_to(root):
+                raise DatabaseSafetyError("Database backup must remain outside media roots.")
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        target = sqlite3.connect(destination)
+        try:
+            source.backup(target)
+        finally:
+            target.close()
+    finally:
+        source.close()
+    return destination

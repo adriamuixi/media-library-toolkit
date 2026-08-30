@@ -15,6 +15,7 @@ from media_toolkit.associations.service import (
     run_association_detection,
 )
 from media_toolkit.catalog.database import (
+    backup_database,
     get_database_status,
     initialize_database,
     reset_test_database,
@@ -104,6 +105,9 @@ def build_parser() -> argparse.ArgumentParser:
         help="Confirm permanent deletion of the selected TEST catalog.",
     )
     reset_parser.set_defaults(handler=_handle_db_reset)
+    backup_parser = db_commands.add_parser("backup", help="Create a consistent catalog backup.")
+    backup_parser.add_argument("--output", required=True, type=Path)
+    backup_parser.set_defaults(handler=_handle_db_backup)
 
     library_parser = commands.add_parser(
         "library", help="Register or list logical media libraries."
@@ -461,6 +465,13 @@ def _handle_db_reset(args: argparse.Namespace, config: AppConfig) -> int:
     print(f"TEST catalog reset: {status.path}")
     print(f"New database ID: {status.database_id}")
     print(f"Schema version: {status.schema_version}")
+    return 0
+
+
+def _handle_db_backup(args: argparse.Namespace, config: AppConfig) -> int:
+    profile = config.profile(args.profile)
+    output = backup_database(profile.database, profile.environment, args.output)
+    print(f"Catalog backup: {output}")
     return 0
 
 
