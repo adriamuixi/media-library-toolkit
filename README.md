@@ -2,7 +2,7 @@
 
 Media Library Toolkit is a local, safety-first command-line application for building a durable catalog of personal photographs and videos. It is designed for large libraries, repeatable imports, exact duplicate detection, traceable naming, and controlled year-based organization.
 
-The project is being built incrementally. The current release provides the Foundation layer, read-only inventory scans, cached photo and video metadata extraction, capture-date resolution, media associations, and streaming SHA-256 calculation.
+The project is being built incrementally. The current release provides read-only inventory scans, metadata extraction, capture-date resolution, media associations, exact SHA-256 analysis, immutable provenance, catalog backups, and open provenance exports.
 
 ## Safety
 
@@ -12,7 +12,7 @@ Scan and metadata commands inspect files but never modify them.
 
 The `media hashes calculate` command reads cataloged files in bounded chunks, records immutable success or error history in SQLite, and never modifies media content or metadata. It refuses a file whose size or modification timestamp has changed since inventory, or while hashing is in progress.
 
-Historical provenance is treated as immutable catalog data. Before physical organization is implemented, the catalog will retain each original filename, original relative path, source, import batch, source-folder context, current location, and every observed location of exact duplicate content. See [docs/provenance.md](docs/provenance.md).
+Historical provenance is immutable catalog data. The catalog retains each original filename, original relative path, source, import batch, source-folder context, current location, and every observed location of exact duplicate content. See [docs/provenance.md](docs/provenance.md).
 
 A later V1 Local Media Browser will provide a loopback-only, read-only visual gallery over the organized library and SQLite catalog. It will include `no_date`, always exclude `toAnalyze`, cache thumbnails outside media roots, and expose original provenance without modifying media. See [docs/browser.md](docs/browser.md).
 
@@ -199,10 +199,13 @@ Relative paths are resolved from the current working directory. `config/local.to
 media init
 media db status
 media db reset --confirm-reset
+media db backup --output PATH
 media library add
 media library list
 media source add
 media source list
+media batch add
+media batch list
 media scan
 media tools check
 media metadata
@@ -215,6 +218,8 @@ media hashes list
 media duplicates candidates
 media duplicates exact
 media duplicates report
+media provenance export
+media plan create --library LIBRARY
 ```
 
 Use `media COMMAND --help` for command-specific help.

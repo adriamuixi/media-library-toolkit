@@ -2,6 +2,8 @@
 
 V1 physical organization will use year directories and `no_date` for media without an accepted date. Planning, review, and WRITE execution remain separate stages.
 
+The available `media plan create --library LIBRARY` command creates a read-only `YEAR_OR_NO_DATE` plan. It deterministically assigns resolved dates to their four-digit year and all other date states to `no_date`, records each destination collision, and produces a content checksum. It does not copy, move, rename, or modify media.
+
 Organization changes current physical locations but never changes historical provenance. A plan must carry the observation identity and immutable original relative path. Associated Live Photos, RAW and JPEG pairs, and sidecars must be planned together. Destination names must preserve the original filename component.
 
 Active `LIVE_PHOTO_PAIR`, `RAW_JPEG_PAIR`, and `SIDECAR_ASSOCIATION` records form indivisible planning groups. A conflict must be reviewed before planning. Inactive relations remain historical evidence but do not automatically join a new operation plan.

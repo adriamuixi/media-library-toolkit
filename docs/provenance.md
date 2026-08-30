@@ -69,13 +69,13 @@ Provenance is stored only in SQLite. The toolkit must not write it into EXIF, IP
 
 ## Backup and Export
 
-Before production WRITE is available, the CLI must provide a consistent SQLite backup operation, conceptually:
+The CLI provides a consistent SQLite backup operation:
 
 ```bash
-media database backup
+media db backup --output PATH
 ```
 
-It must also export critical provenance to CSV and JSON for inspection and secondary backup. A provenance export should include logical media identity, original and current names and paths, source, import batch, SHA-256 when available, and all historical observations. Exports are not the source of truth and do not replace SQLite backups.
+It also exports critical provenance to CSV and JSON for inspection and secondary backup with `media provenance export`. A provenance export includes logical media identity, original and current names and paths, source, import batch, SHA-256 when available, and all historical observations. Exports are not the source of truth and do not replace SQLite backups.
 
 ## WRITE Preconditions
 

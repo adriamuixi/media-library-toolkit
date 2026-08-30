@@ -26,7 +26,7 @@ Planning and execution are separate. A plan describes intended changes; only a d
 
 ## Identity and Provenance Boundary
 
-The V1 catalog will distinguish logical content from historical observations:
+The V1 catalog distinguishes logical content from historical observations:
 
 ```text
 media item identified by exact content
@@ -56,7 +56,7 @@ The browser is not the Local Review workflow. Local Review may append audited de
 
 ## Current Scope
 
-The current implementation initializes external working directories, maintains a versioned SQLite catalog, scans media read-only, extracts metadata read-only, resolves effective dates, and detects media associations from cataloged evidence. It does not modify media.
+The current implementation initializes external working directories, maintains a versioned SQLite catalog, scans media read-only, extracts metadata read-only, resolves effective dates, detects media associations, calculates exact hashes, preserves provenance, and creates read-only organization plans. It does not modify media.
 
 ## Runtime State
 

@@ -67,7 +67,7 @@ Traversal and inventory persistence are streaming. The scanner does not load the
 
 The tuple of registered source and exact relative path identifies an observed location during the scan phase. Repeating a scan updates that location and preserves its `media_id`. It does not create duplicate rows.
 
-Content identity is not inferred from path. SHA-256 and conservative movement reconciliation will be implemented in later phases.
+Content identity is not inferred from path. SHA-256 establishes exact logical content identity, while every path remains an independent immutable observation. Conservative movement reconciliation remains a later phase.
 
 ## Resume
 

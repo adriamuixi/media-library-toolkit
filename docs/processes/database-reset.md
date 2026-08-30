@@ -28,4 +28,4 @@ media --profile test db reset --confirm-reset
 
 ## Known Limitations
 
-Production catalog reset is intentionally unavailable. Backups and production recovery will be designed before the historical-library phase.
+Production catalog reset is intentionally unavailable. Use `media db backup --output PATH` for catalog backups; production recovery procedures remain deliberately conservative.

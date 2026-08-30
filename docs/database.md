@@ -25,7 +25,7 @@ Source default timezones use IANA names such as `Europe/Madrid`. A source does n
 
 A repeated scan of the same source-relative path updates the existing `media_file` and `file_location` rows rather than creating duplicates. Path identity is intentionally not treated as content identity.
 
-The current inventory schema precedes logical content identity. The provenance phase will migrate it without discarding records so that a logical content item can reference multiple immutable file observations. `file_location` data must not be collapsed merely because observations share a SHA-256 hash.
+Inventory paths remain operational scan state. Immutable `file_observation` rows preserve historical paths and may share one logical `media_item` when their current SHA-256 values match. `file_location` data is never collapsed because content is duplicated.
 
 Absolute scan roots are retained in `scan.root_path_snapshot` for traceability only. Portable file location queries use `file_location.relative_path`.
 
@@ -45,7 +45,7 @@ File size remains on both `media_file` and `file_location` because it belongs to
 
 Hashing streams bounded chunks from a validated cataloged path. A cached success is reusable only when the algorithm, cataloged size, and cataloged modification timestamp all match. Hashing records an error and continues with other files when a file is missing, unsafe, changed, or unreadable.
 
-The current hash does not yet create a logical `media_item` or collapse inventory paths. The next duplicate-grouping stage will use equal SHA-256 values as exact-content evidence while retaining every physical observation for the later provenance migration.
+Each successful current SHA-256 creates or reuses one `media_item`. Every matching observation links to that item while retaining independent source, batch, and original-path history.
 
 Same-size candidate generation is a read-only catalog query. It groups only present files in one library that share a byte size and is intentionally non-authoritative: equal size is a performance filter, not duplicate evidence. SHA-256 equality is required before later duplicate grouping can call content exact.
 
@@ -53,16 +53,16 @@ Exact duplicate grouping is also a read-only catalog query. It includes only pre
 
 The optional duplicate source-type ranking is configuration only. It may recommend one uniquely highest-ranked member for review, but it does not update SQLite identity, select an operation, or authorize cleanup. An unconfigured or tied group has no recommendation.
 
-## Planned Provenance Tables
+## Provenance Tables
 
-The V1 provenance migration will introduce or evolve records for:
+The catalog contains:
 
 - `import_batch`: a stable identifier, source, label, and registration timestamps for one incorporation set;
 - `media_item`: logical content identity established by exact SHA-256;
 - `file_observation`: every historical appearance of content at a source-relative path;
 - current location history: audited transitions without replacing the immutable original path.
 
-Each observation must retain at least its original filename, original relative path, source, import batch, and current relative path when one exists. Optional raw source context is stored independently from any later normalized value and confidence. Multiple observations may reference one logical item, and no duplicate-consolidation process may delete those observations.
+Each observation retains its original filename, original relative path, source, import batch, and current relative path when one exists. Optional raw source context is stored independently from any later normalized value and confidence. Multiple observations may reference one logical item, and no duplicate-consolidation process may delete those observations.
 
 Catalog backups use SQLite's consistent online backup mechanism rather than copying an active database file directly. CSV and JSON provenance exports are secondary open-format safeguards, not the catalog of record.
 

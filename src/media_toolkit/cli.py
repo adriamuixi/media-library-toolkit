@@ -46,6 +46,7 @@ from media_toolkit.metadata.exiftool import ExifToolAdapter
 from media_toolkit.metadata.ffprobe import FfprobeAdapter
 from media_toolkit.metadata.service import MetadataRequest, run_metadata
 from media_toolkit.provenance.service import export_provenance
+from media_toolkit.planning.service import create_year_or_no_date_plan
 from media_toolkit.scan.safety import ensure_external_working_paths
 from media_toolkit.scan.service import ScanRequest, run_scan
 
@@ -435,6 +436,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--media-type", choices=("photos", "videos", "all"), default="all"
     )
     duplicates_report_parser.set_defaults(handler=_handle_duplicates_report)
+
+    plan_parser = commands.add_parser(
+        "plan", help="Create read-only deterministic organization plans."
+    )
+    plan_commands = plan_parser.add_subparsers(dest="plan_command", required=True)
+    plan_create_parser = plan_commands.add_parser(
+        "create", help="Create a YEAR_OR_NO_DATE plan without changing media."
+    )
+    plan_create_parser.add_argument("--library", required=True)
+    plan_create_parser.set_defaults(handler=_handle_plan_create)
     return parser
 
 
@@ -898,6 +909,19 @@ def _handle_duplicates_report(args: argparse.Namespace, config: AppConfig) -> in
     return 0
 
 
+def _handle_plan_create(args: argparse.Namespace, config: AppConfig) -> int:
+    profile = config.profile(args.profile)
+    summary = create_year_or_no_date_plan(
+        profile.database, profile.environment, args.library
+    )
+    print(f"Plan ID: {summary.plan_id}")
+    print(f"Status: {summary.status}")
+    print(f"Items: {summary.item_count}")
+    print(f"Conflicts: {summary.conflict_count}")
+    print(f"Checksum: {summary.checksum}")
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the CLI and convert expected failures into concise messages."""
     parser = build_parser()
@@ -915,6 +939,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             command_name = f"batch-{args.batch_command}"
         elif getattr(args, "provenance_command", None):
             command_name = f"provenance-{args.provenance_command}"
+        elif getattr(args, "plan_command", None):
+            command_name = f"plan-{args.plan_command}"
         elif getattr(args, "tools_command", None):
             command_name = f"tools-{args.tools_command}"
         elif getattr(args, "dates_command", None):

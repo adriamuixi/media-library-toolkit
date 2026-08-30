@@ -62,8 +62,8 @@
 
 ## V1.6 — Planning
 
-- [ ] Deterministic rename plans
-- [ ] Year and `no_date` organization plans
+- [x] Deterministic rename plans
+- [x] Year and `no_date` organization plans
 - [ ] Associated-file planning
 - [ ] Conflict validation
 - [ ] CSV and JSON exports
