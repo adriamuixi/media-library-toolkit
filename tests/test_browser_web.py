@@ -5,7 +5,7 @@ import unittest
 
 from PIL import Image
 
-from media_toolkit.browser.web import create_browser_app
+from media_toolkit.browser.web import BrowserMedia, _filtered_entries, create_browser_app
 from media_toolkit.catalog.database import (
     initialize_database,
     open_database,
@@ -74,6 +74,15 @@ class BrowserWebTests(unittest.TestCase):
             with open_readonly_database(database) as connection:
                 with self.assertRaises(sqlite3.OperationalError):
                     connection.execute("CREATE TABLE browser_write_attempt (value TEXT)")
+
+    def test_filtering_remains_bounded_for_a_large_catalog_shape(self) -> None:
+        entry = BrowserMedia(
+            "media", "2024/IMG.jpg", "PHOTO", "jpg", "PRESENT", "2024-01-01T10:00:00",
+            "Camera", "BATCH", "IMG.jpg", "2024/IMG.jpg", 1,
+        )
+        entries = [entry] * 100_000
+        filtered = _filtered_entries(entries, {"year": "2024", "q": "img"})
+        self.assertEqual(len(filtered), 100_000)
 
 
 if __name__ == "__main__":

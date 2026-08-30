@@ -109,19 +109,19 @@
 
 ### Browser V1
 
-- [ ] Video thumbnails and browser-compatible playback
-- [ ] Month, media-type, source, and extension filters
-- [ ] Text search across filenames and immutable provenance
-- [ ] Complete metadata and provenance detail panels
-- [ ] Stable sorting, pagination, and filtered previous/next navigation
+- [x] Video thumbnails and browser-compatible playback
+- [x] Month, media-type, source, and extension filters
+- [x] Text search across filenames and immutable provenance
+- [x] Complete metadata and provenance detail panels
+- [x] Stable sorting, pagination, and filtered previous/next navigation
 
 ### Browser V1.1
 
-- [ ] Exact-duplicate observation visualization
-- [ ] Dedicated `no_date` browsing
-- [ ] Keyboard navigation
-- [ ] Query and thumbnail performance validation at 100,000+ records
-- [ ] Responsive gallery and optional dark theme
+- [x] Exact-duplicate observation visualization
+- [x] Dedicated `no_date` browsing
+- [x] Keyboard navigation
+- [x] Query and thumbnail performance validation at 100,000+ records
+- [x] Responsive gallery and optional dark theme
 
 ## V1.10 — Incremental Imports
 

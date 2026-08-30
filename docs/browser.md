@@ -144,19 +144,19 @@ A missing original remains in gallery and detail queries using catalog metadata,
 
 ### Browser V1
 
-- video thumbnails and compatible playback;
+- video thumbnails through an optional local ffmpeg installation and compatible native playback;
 - month, source, media-type, and extension filters;
 - provenance search;
-- full technical and historical detail;
+- technical and immutable historical detail;
 - stable sorting and filtered previous/next navigation.
 
 ### Browser V1.1
 
 - exact duplicate observation expansion;
-- dedicated `no_date` workflow;
+- dedicated `no_date` filter;
 - keyboard navigation;
-- responsive polish and optional dark theme;
-- measured performance improvements.
+- responsive dark theme;
+- a 100,000-entry filter-shape regression test.
 
 ## Limitations
 

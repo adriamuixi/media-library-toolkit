@@ -10,6 +10,8 @@ The project intends to follow Semantic Versioning once stable public releases be
 
 - Added Browser V0: a loopback-only read-only Flask gallery for organized photos with media-ID serving, Unicode-safe `toAnalyze` exclusion, external thumbnails, year filtering, and missing-file detail states.
 
+- Expanded Local Media Browser with video playback and external ffmpeg thumbnails, provenance search and filters, technical detail, duplicate observations, filtered navigation, and keyboard shortcuts.
+
 - Added a loopback-only immutable Datasette Database Browser with versioned inspection queries and focused SQLite views.
 
 - Added an explicitly confirmed controlled COPY operation with provenance checks, SHA-256 verification, append-only journaling, and no-overwrite protection.
