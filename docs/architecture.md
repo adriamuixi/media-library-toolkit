@@ -54,6 +54,8 @@ It will use an optional Flask server with server-rendered HTML, CSS, and small v
 
 The browser is not the Local Review workflow. Local Review is a loopback-only paginated HTML interface for catalog review and may append audited decisions to SQLite. The Local Media Browser exposes no mutation routes and opens SQLite in read-only mode. Shared query and thumbnail components may be reused without combining their permission models.
 
+Local Database Browser is also separate from both interfaces. It will expose the configured SQLite catalog through Datasette in loopback-only read-only mode for technical inspection, schema navigation, saved SQL queries, and debugging. It will not share media-serving routes or mutation controls with Local Review or Local Media Browser.
+
 ## Current Scope
 
 The current implementation initializes external working directories, maintains a versioned SQLite catalog, scans media read-only, extracts metadata read-only, resolves effective dates, detects media associations, calculates exact hashes, preserves provenance, and creates read-only organization plans. It does not modify media.

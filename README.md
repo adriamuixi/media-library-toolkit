@@ -16,6 +16,8 @@ Historical provenance is immutable catalog data. The catalog retains each origin
 
 A later V1 Local Media Browser will provide a loopback-only, read-only visual gallery over the organized library and SQLite catalog. It will include `no_date`, always exclude `toAnalyze`, cache thumbnails outside media roots, and expose original provenance without modifying media. See [docs/browser.md](docs/browser.md).
 
+The planned Local Database Browser is a separate loopback-only, read-only Datasette interface for technical SQLite inspection, saved queries, migrations, and relationships. See [docs/database-browser.md](docs/database-browser.md).
+
 Catalog environments are physically separated by default:
 
 ```text
